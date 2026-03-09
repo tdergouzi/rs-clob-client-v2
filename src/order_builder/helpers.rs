@@ -89,9 +89,9 @@ pub fn get_order_raw_amounts(
 
 /// Polymarket API precision limits for market orders:
 /// - maker_amount: max 2 decimal places
-/// - taker_amount: max 5 decimal places
+/// - taker_amount: max 4 decimal places
 const MARKET_ORDER_MAKER_DECIMALS: u32 = 2;
-const MARKET_ORDER_TAKER_DECIMALS: u32 = 5;
+const MARKET_ORDER_TAKER_DECIMALS: u32 = 4;
 
 pub fn get_market_order_raw_amounts(
     side: Side,
@@ -106,7 +106,7 @@ pub fn get_market_order_raw_amounts(
             // For buy orders: maker_amt is USDC paid, taker_amt is shares received
             // Always enforce maker precision to 2 decimals (API requirement)
             let raw_maker_amt = round_down(amount, MARKET_ORDER_MAKER_DECIMALS);
-            // Calculate taker amount and enforce 5 decimal precision (API requirement)
+            // Calculate taker amount and enforce 4 decimal precision (API requirement)
             let raw_taker_amt = round_down(raw_maker_amt / raw_price, MARKET_ORDER_TAKER_DECIMALS);
 
             RawAmounts {
@@ -119,7 +119,7 @@ pub fn get_market_order_raw_amounts(
             // For sell orders: maker_amt is shares sold, taker_amt is USDC received
             // Enforce maker precision to 2 decimals
             let raw_maker_amt = round_down(amount, MARKET_ORDER_MAKER_DECIMALS);
-            // Calculate taker amount and enforce 5 decimal precision
+            // Calculate taker amount and enforce 4 decimal precision
             let raw_taker_amt = round_down(raw_maker_amt * raw_price, MARKET_ORDER_TAKER_DECIMALS);
 
             RawAmounts {
@@ -243,13 +243,13 @@ fn parse_market_maker_units(value: f64, decimals: u8) -> U256 {
     U256::from(aligned_value)
 }
 
-/// Parse units for market order taker amount (max 5 decimals precision)
-/// Result must be a multiple of 10 (since USDC has 6 decimals, 5 decimal precision = 10^(6-5) = 10)
+/// Parse units for market order taker amount (max 4 decimals precision)
+/// Result must be a multiple of 100 (since USDC has 6 decimals, 4 decimal precision = 10^(6-4) = 100)
 fn parse_market_taker_units(value: f64, decimals: u8) -> U256 {
     let multiplier = 10_f64.powi(decimals as i32);
     let raw_value = (value * multiplier).round() as u128;
-    // Align to 10 (for 5 decimal precision with 6 decimal token)
-    let alignment = 10_u128.pow((decimals - 5) as u32); // 10^1 = 10
+    // Align to 100 (for 4 decimal precision with 6 decimal token)
+    let alignment = 10_u128.pow((decimals - 4) as u32); // 10^2 = 100
     let aligned_value = (raw_value / alignment) * alignment;
     U256::from(aligned_value)
 }
