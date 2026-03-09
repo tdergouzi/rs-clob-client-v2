@@ -3,9 +3,13 @@ mod common;
 use common::create_test_client_with_wallet;
 use rs_clob_client::types::{OrderType, Side, TradeParams, UserLimitOrder, UserMarketOrder};
 
-/// Fed decision in December 25 bps decrease yes token ID
-const YES_TOKEN: &str =
-    "87769991026114894163580777793845523168226980076553814689875238288185044414090";
+const TOKEN: &str = "112838095111461683880944516726938163688341306245473734071798778736646352193304";
+const ORDER_ID: &str = "0xb2414d76eb52b85f0e756951532bf0c47eddc686b852484c28d8219401537f89";
+
+const LIMIT_BUY_PRICE: f64 = 0.95;
+const LIMIT_BUY_SIZE: f64 = 5.0;
+const LIMIT_SELL_PRICE: f64 = 0.4;
+const LIMIT_SELL_SIZE: f64 = 5.0;
 
 #[tokio::test]
 async fn test_create_market_buy_order() {
@@ -20,7 +24,7 @@ async fn test_create_market_buy_order() {
     let response = client
         .create_and_post_market_order(
             &UserMarketOrder {
-                token_id: YES_TOKEN.to_string(),
+                token_id: TOKEN.to_string(),
                 amount: 5.0,
                 side: Side::Buy,
                 price: None,
@@ -57,8 +61,8 @@ async fn test_create_market_sell_order() {
     let response = client
         .create_and_post_market_order(
             &UserMarketOrder {
-                token_id: YES_TOKEN.to_string(),
-                amount: 5.55555, // SHARES
+                token_id: TOKEN.to_string(),
+                amount: LIMIT_SELL_SIZE, // SHARES
                 side: Side::Sell,
                 price: None,
                 fee_rate_bps: None,
@@ -94,9 +98,9 @@ async fn test_create_limit_buy_order() {
     let response = client
         .create_and_post_limit_order(
             &UserLimitOrder {
-                token_id: YES_TOKEN.to_string(),
-                price: 0.80,
-                size: 5.0, // SHARES
+                token_id: TOKEN.to_string(),
+                price: LIMIT_BUY_PRICE,
+                size: LIMIT_BUY_SIZE, // SHARES
                 side: Side::Buy,
                 fee_rate_bps: None,
                 nonce: None,
@@ -131,9 +135,9 @@ async fn test_create_limit_sell_order() {
     let response = client
         .create_and_post_limit_order(
             &UserLimitOrder {
-                token_id: YES_TOKEN.to_string(),
-                price: 0.92,
-                size: 5.55555, // SHARES
+                token_id: TOKEN.to_string(),
+                price: LIMIT_SELL_PRICE,
+                size: LIMIT_SELL_SIZE, // SHARES
                 side: Side::Sell,
                 fee_rate_bps: None,
                 nonce: None,
@@ -168,7 +172,7 @@ async fn test_get_trades() {
         id: None,
         market: None,
         asset_id: None,
-        maker_address: Some("0x73c8f452f2e628bf98853970cd586801123503fe".to_string()),
+        maker_address: Some("0x1e6f40b325c8eb65a8ff62ff5261d51f362fdee0".to_string()),
         before: None,
         after: None,
     });
@@ -182,7 +186,7 @@ async fn test_get_trades() {
     // Assertions
     assert!(!trades.len() > 0, "Trades should not be empty");
 
-    println!("Trades: {:#?}", trades);
+    println!("Trades: {:#?}", trades[0]);
 }
 
 #[tokio::test]
@@ -194,7 +198,7 @@ async fn test_get_open_order() {
         .expect("Failed to create or derive API key");
     client.set_api_creds(creds);
 
-    let order_id = "0x2601867f24395c00f981dabedfd92ab86cec62a018b68eec6908f01ebbdd812c"; // Market sell order
+    let order_id = ORDER_ID; // Market sell order
     let order = client
         .get_open_order(order_id)
         .await
