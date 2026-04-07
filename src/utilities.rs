@@ -9,17 +9,25 @@ pub fn round_normal(num: f64, decimals: u32) -> f64 {
 }
 
 /// Round down (floor) to specified decimal places.
-/// Always applies rounding to avoid floating point precision issues.
+/// Uses epsilon compensation to avoid IEEE 754 floating-point precision issues
+/// (e.g. 285.71 * 100 = 28570.999999999996 which would floor to 28570).
 pub fn round_down(num: f64, decimals: u32) -> f64 {
     let multiplier = 10_f64.powi(decimals as i32);
-    (num * multiplier).floor() / multiplier
+    let scaled = num * multiplier;
+    let rounded = scaled.round();
+    let result = if (scaled - rounded).abs() < 1e-9 { rounded } else { scaled.floor() };
+    result / multiplier
 }
 
 /// Round up (ceil) to specified decimal places.
-/// Always applies rounding to avoid floating point precision issues.
+/// Uses epsilon compensation to avoid IEEE 754 floating-point precision issues
+/// (e.g. a value like 0.3 * 10 = 2.9999999999999996 which would ceil incorrectly).
 pub fn round_up(num: f64, decimals: u32) -> f64 {
     let multiplier = 10_f64.powi(decimals as i32);
-    (num * multiplier).ceil() / multiplier
+    let scaled = num * multiplier;
+    let rounded = scaled.round();
+    let result = if (scaled - rounded).abs() < 1e-9 { rounded } else { scaled.ceil() };
+    result / multiplier
 }
 
 pub fn decimal_places(num: f64) -> u32 {
@@ -81,6 +89,11 @@ mod tests {
         assert_eq!(round_down(0.559, 2), 0.55);
         assert_eq!(round_down(0.551, 2), 0.55);
         assert_eq!(round_down(0.5, 2), 0.5);
+        // IEEE 754 precision: 285.71 * 100 = 28570.999999999996, must not lose the 0.01
+        assert_eq!(round_down(285.71, 2), 285.71);
+        assert_eq!(round_down(1.1, 1), 1.1);
+        // Genuine fractional part beyond precision should still floor
+        assert_eq!(round_down(285.719, 2), 285.71);
     }
 
     #[test]
@@ -88,6 +101,11 @@ mod tests {
         assert_eq!(round_up(0.551, 2), 0.56);
         assert_eq!(round_up(0.559, 2), 0.56);
         assert_eq!(round_up(0.5, 2), 0.5);
+        // IEEE 754 precision: should not round up when already at boundary
+        assert_eq!(round_up(285.71, 2), 285.71);
+        assert_eq!(round_up(1.1, 1), 1.1);
+        // Genuine fractional part beyond precision should still ceil
+        assert_eq!(round_up(285.711, 2), 285.72);
     }
 
     #[test]
