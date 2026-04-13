@@ -1,6 +1,6 @@
 [package]
 name = "rs-clob-client"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 authors = ["Ted"]
 description = "Rust client for Polymarket's CLOB (Central Limit Order Book)"
@@ -21,15 +21,13 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Ethereum & Cryptography
-rs_order_utils = "0.1.2"
+rs_order_utils = "0.2.1"
 rs-builder-signing-sdk = "0.1.2"
 
 # Alloy - Modern Ethereum library
 alloy-primitives = "0.8"
-alloy-signer = "0.5"
-alloy-signer-local = "0.5"
-alloy-sol-types = "0.8"
-alloy-dyn-abi = "0.8"
+alloy-signer = "0.8"
+alloy-signer-local = "0.8"
 
 # Authentication & Crypto
 hmac = "0.12"

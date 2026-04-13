@@ -10,9 +10,9 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rs-clob-client = "0.1"
+rs-clob-client = "0.1.8"
 alloy-primitives = "0.8"
-alloy-signer-local = "0.5"
+alloy-signer-local = "0.8"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
