@@ -1,5 +1,5 @@
 use alloy_signer_local::PrivateKeySigner;
-use rs_clob_client::signing::build_clob_eip712_signature;
+use rs_clob_client_v2::signing::build_clob_eip712_signature;
 
 #[tokio::test]
 async fn test_build_clob_eip712_signature() {

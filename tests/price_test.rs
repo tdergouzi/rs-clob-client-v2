@@ -1,7 +1,7 @@
 mod common;
 
 use common::create_test_client;
-use rs_clob_client::types::{
+use rs_clob_client_v2::types::{
     OrderBookParams, PriceHistoryInterval, PriceHistoryParams, PriceParams, Side, SpreadsParams, LastTradePriceParams,
 };
 

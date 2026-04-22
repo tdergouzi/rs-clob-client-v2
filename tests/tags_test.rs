@@ -1,6 +1,6 @@
 mod common;
 use common::create_test_client;
-use rs_clob_client::types::{Tag, TagParams};
+use rs_clob_client_v2::types::{Tag, TagParams};
 
 #[tokio::test]
 async fn test_get_tags() {

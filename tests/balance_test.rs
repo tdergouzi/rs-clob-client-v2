@@ -1,8 +1,8 @@
 mod common;
 
 use common::{create_test_client_with_api_key};
-use rs_clob_client::types::markets::BalanceAllowanceParams;
-use rs_clob_client::types::primitives::AssetType;
+use rs_clob_client_v2::types::markets::BalanceAllowanceParams;
+use rs_clob_client_v2::types::primitives::AssetType;
 
 #[tokio::test]
 async fn test_get_balance_allowance() {

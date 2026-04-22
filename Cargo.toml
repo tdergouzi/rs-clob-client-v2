@@ -1,12 +1,12 @@
 [package]
-name = "rs-clob-client"
-version = "0.1.8"
+name = "rs-clob-client-v2"
+version = "0.1.0-alpha.1"
 edition = "2021"
 authors = ["Ted"]
-description = "Rust client for Polymarket's CLOB (Central Limit Order Book)"
+description = "Rust client for Polymarket's CLOB v2 protocol (Central Limit Order Book)"
 license = "MIT"
-repository = "https://github.com/tdergouzi/rs-clob-client"
-homepage = "https://github.com/tdergouzi/rs-clob-client"
+repository = "https://github.com/tdergouzi/rs-clob-client-v2"
+homepage = "https://github.com/tdergouzi/rs-clob-client-v2"
 keywords = ["polymarket", "clob", "trading", "ethereum", "web3"]
 
 [dependencies]
@@ -50,5 +50,5 @@ rand = "0.8"
 dotenvy = "0.15"
 
 [lib]
-name = "rs_clob_client"
+name = "rs_clob_client_v2"
 path = "src/lib.rs"

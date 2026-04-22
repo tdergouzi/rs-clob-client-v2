@@ -1,7 +1,7 @@
 mod common;
 
 use common::create_test_client;
-use rs_clob_client::types::OrderBookParams;
+use rs_clob_client_v2::types::OrderBookParams;
 
 #[tokio::test]
 async fn test_get_orderbook() {

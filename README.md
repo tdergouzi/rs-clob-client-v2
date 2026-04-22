@@ -1,8 +1,12 @@
-# rs-clob-client
+# rs-clob-client-v2
 
-🦀 Rust client for Polymarket's CLOB (Central Limit Order Book) API with full EIP-712 signing support.
+> 🚧 **Work in Progress** — V2 protocol migration. Expect breaking changes until `0.1.0` is released. For the stable V1 client, see [`rs-clob-client`](https://github.com/tdergouzi/rs-clob-client).
 
-This library provides a complete Rust port of the TypeScript `@polymarket/clob-client`, enabling you to interact with Polymarket's trading infrastructure for creating orders, managing API keys, fetching market data, and more.
+🦀 Rust client for Polymarket's CLOB (Central Limit Order Book) **v2 protocol** with full EIP-712 signing support.
+
+This library is a Rust port of the TypeScript `@polymarket/clob-client-v2`, targeting Polymarket's upgraded v2 exchange: new 11-field order struct, EIP-1271 smart-contract signature support, builder/referral metadata, read-only API keys, and more.
+
+Code examples below still reflect the v1 surface that this fork started from; they will be replaced with v2-native examples as the migration progresses.
 
 ## Installation
 
@@ -10,7 +14,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rs-clob-client = "0.1.8"
+rs-clob-client-v2 = "0.1.0-alpha.1"
 alloy-primitives = "0.8"
 alloy-signer-local = "0.8"
 tokio = { version = "1.0", features = ["full"] }

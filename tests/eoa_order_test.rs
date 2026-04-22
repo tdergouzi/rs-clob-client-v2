@@ -1,7 +1,7 @@
 mod common;
 
 use common::create_test_client_with_wallet;
-use rs_clob_client::types::{OrderType, Side, TradeParams, UserLimitOrder, UserMarketOrder};
+use rs_clob_client_v2::types::{OrderType, Side, TradeParams, UserLimitOrder, UserMarketOrder};
 
 const TOKEN: &str = "112838095111461683880944516726938163688341306245473734071798778736646352193304";
 const ORDER_ID: &str = "0xb2414d76eb52b85f0e756951532bf0c47eddc686b852484c28d8219401537f89";

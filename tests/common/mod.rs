@@ -2,7 +2,7 @@
 
 use alloy_signer_local::PrivateKeySigner;
 use rs_builder_signing_sdk::{BuilderApiKeyCreds, BuilderConfig};
-use rs_clob_client::{
+use rs_clob_client_v2::{
     client::ClobClient,
     types::{ApiKeyCreds, Chain},
 };
