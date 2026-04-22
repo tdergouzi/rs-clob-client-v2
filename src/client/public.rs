@@ -194,6 +194,15 @@ impl ClobClient {
     }
 
     // Token
+    /// Returns the bid-ask spread for a single token.
+    pub async fn get_spread(&self, token_id: &str) -> ClobResult<serde_json::Value> {
+        let mut query_params = HashMap::new();
+        query_params.insert("token_id".to_string(), token_id.to_string());
+        self.http_client
+            .get(endpoints::GET_SPREAD, None, Some(query_params))
+            .await
+    }
+
     pub async fn get_spreads(&self, params: Vec<SpreadsParams>) -> ClobResult<serde_json::Value> {
         self.http_client
             .post(endpoints::GET_SPREADS, None, Some(params), None)
