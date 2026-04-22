@@ -1,6 +1,7 @@
 use crate::client::ClobClient;
 use crate::endpoints::endpoints;
 use crate::errors::{ClobError, ClobResult};
+use crate::headers::create_l2_headers;
 use crate::types::*;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -12,11 +13,46 @@ impl ClobClient {
 
     // Server
     pub async fn get_ok(&self) -> ClobResult<serde_json::Value> {
-        self.http_client.get("/", None, None).await
+        self.http_client.get(endpoints::OK, None, None).await
     }
 
     pub async fn get_server_time(&self) -> ClobResult<u64> {
         self.http_client.get(endpoints::TIME, None, None).await
+    }
+
+    /// Pings the server with an optional `heartbeat_id`. Requires L2 auth.
+    pub async fn post_heartbeat(
+        &self,
+        heartbeat_id: Option<&str>,
+    ) -> ClobResult<HeartbeatResponse> {
+        self.can_l2_auth()?;
+
+        let wallet = self.wallet.as_ref().ok_or(ClobError::L1AuthUnavailable)?;
+        let creds = self.creds.as_ref().ok_or(ClobError::L2AuthNotAvailable)?;
+
+        let payload = serde_json::json!({ "heartbeat_id": heartbeat_id.unwrap_or("") });
+        let body = serde_json::to_string(&payload)?;
+
+        let timestamp = if self.use_server_time {
+            Some(self.get_server_time().await?)
+        } else {
+            None
+        };
+
+        let headers = create_l2_headers(
+            wallet,
+            creds,
+            "POST",
+            endpoints::HEARTBEAT,
+            Some(&body),
+            timestamp,
+        )
+        .await?
+        .to_headers();
+
+        self.http_client
+            .post(endpoints::HEARTBEAT, Some(headers), Some(payload), None)
+            .await
     }
 
     // Tags
