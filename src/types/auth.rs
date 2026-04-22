@@ -39,6 +39,13 @@ pub struct ApiKeysResponse {
     pub api_keys: Vec<String>,
 }
 
+/// Response from `POST /auth/readonly-api-key`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadonlyApiKeyResponse {
+    pub api_key: String,
+}
+
 /// Builder API key
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuilderApiKey {

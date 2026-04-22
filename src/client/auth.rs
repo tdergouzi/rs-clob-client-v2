@@ -299,6 +299,77 @@ impl ClobClient {
         Ok(())
     }
 
+    // Readonly API Key (L2 Authentication)
+    pub async fn create_readonly_api_key(&self) -> ClobResult<ReadonlyApiKeyResponse> {
+        self.can_l2_auth()?;
+
+        let wallet = self.wallet.as_ref().ok_or(ClobError::L1AuthUnavailable)?;
+        let creds = self.creds.as_ref().ok_or(ClobError::L2AuthNotAvailable)?;
+
+        let endpoint_path = endpoints::CREATE_READONLY_API_KEY;
+        let timestamp = if self.use_server_time {
+            Some(self.get_server_time().await?)
+        } else {
+            None
+        };
+
+        let headers = create_l2_headers(wallet, creds, "POST", endpoint_path, None, timestamp)
+            .await?
+            .to_headers();
+
+        self.http_client
+            .post(endpoint_path, Some(headers), None::<()>, None)
+            .await
+    }
+
+    pub async fn get_readonly_api_keys(&self) -> ClobResult<Vec<String>> {
+        self.can_l2_auth()?;
+
+        let wallet = self.wallet.as_ref().ok_or(ClobError::L1AuthUnavailable)?;
+        let creds = self.creds.as_ref().ok_or(ClobError::L2AuthNotAvailable)?;
+
+        let endpoint_path = endpoints::GET_READONLY_API_KEYS;
+        let timestamp = if self.use_server_time {
+            Some(self.get_server_time().await?)
+        } else {
+            None
+        };
+
+        let headers = create_l2_headers(wallet, creds, "GET", endpoint_path, None, timestamp)
+            .await?
+            .to_headers();
+
+        self.http_client
+            .get(endpoint_path, Some(headers), None)
+            .await
+    }
+
+    pub async fn delete_readonly_api_key(&self, key: &str) -> ClobResult<bool> {
+        self.can_l2_auth()?;
+
+        let wallet = self.wallet.as_ref().ok_or(ClobError::L1AuthUnavailable)?;
+        let creds = self.creds.as_ref().ok_or(ClobError::L2AuthNotAvailable)?;
+
+        let endpoint_path = endpoints::DELETE_READONLY_API_KEY;
+        let payload = serde_json::json!({ "key": key });
+        let body = serde_json::to_string(&payload)?;
+
+        let timestamp = if self.use_server_time {
+            Some(self.get_server_time().await?)
+        } else {
+            None
+        };
+
+        let headers =
+            create_l2_headers(wallet, creds, "DELETE", endpoint_path, Some(&body), timestamp)
+                .await?
+                .to_headers();
+
+        self.http_client
+            .delete(endpoint_path, Some(headers), Some(payload), None)
+            .await
+    }
+
     // Helper Methods
     pub(crate) fn can_l1_auth(&self) -> ClobResult<()> {
         if self.wallet.is_none() {
