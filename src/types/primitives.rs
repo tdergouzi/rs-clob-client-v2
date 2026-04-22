@@ -165,3 +165,10 @@ pub type NegRisk = HashMap<String, bool>;
 /// Fee rates cache
 pub type FeeRates = HashMap<String, u32>;
 
+/// Builder fee rates returned by `GET /fees/builder-fees/{builder_code}`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct BuilderFeeRate {
+    pub maker: f64,
+    pub taker: f64,
+}
+

@@ -112,6 +112,13 @@ pub struct OpenOrder {
 /// Open orders response
 pub type OpenOrdersResponse = Vec<OpenOrder>;
 
+/// Paginated response for `GET /data/pre-migration-orders`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PreMigrationOrdersPaginatedResponse {
+    pub data: Vec<OpenOrder>,
+    pub next_cursor: String,
+}
+
 /// Open order parameters for filtering
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OpenOrderParams {

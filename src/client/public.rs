@@ -373,4 +373,10 @@ impl ClobClient {
             .post(endpoints::GET_LAST_TRADES_PRICES, None, Some(params), None)
             .await
     }
+
+    /// Returns the maker/taker fee rates for a given builder code.
+    pub async fn get_builder_fees(&self, builder_code: &str) -> ClobResult<BuilderFeeRate> {
+        let endpoint = format!("{}{}", endpoints::GET_BUILDER_FEES, builder_code);
+        self.http_client.get(&endpoint, None, None).await
+    }
 }

@@ -657,4 +657,56 @@ impl ClobClient {
     fn signed_order_to_json(&self, signed_order: SignedOrder) -> ClobResult<serde_json::Value> {
         serde_json::to_value(&signed_order).map_err(ClobError::JsonError)
     }
+
+    // Pre-migration orders (L2 Authentication)
+
+    /// Auto-paginates all pre-migration (V1) orders for the authenticated user.
+    pub async fn get_pre_migration_orders(&self) -> ClobResult<Vec<OpenOrder>> {
+        self.can_l2_auth()?;
+
+        let mut results = Vec::new();
+        let mut next_cursor = INITIAL_CURSOR.to_string();
+
+        while next_cursor != END_CURSOR {
+            let page = self
+                .get_pre_migration_orders_paginated(Some(next_cursor))
+                .await?;
+            results.extend(page.data);
+            next_cursor = page.next_cursor;
+        }
+
+        Ok(results)
+    }
+
+    /// Fetches a single page of pre-migration orders starting at `cursor`.
+    pub async fn get_pre_migration_orders_paginated(
+        &self,
+        cursor: Option<String>,
+    ) -> ClobResult<PreMigrationOrdersPaginatedResponse> {
+        self.can_l2_auth()?;
+
+        let wallet = self.wallet.as_ref().ok_or(ClobError::L1AuthUnavailable)?;
+        let creds = self.creds.as_ref().ok_or(ClobError::L2AuthNotAvailable)?;
+
+        let endpoint_path = endpoints::GET_PRE_MIGRATION_ORDERS;
+        let timestamp = if self.use_server_time {
+            Some(self.get_server_time().await?)
+        } else {
+            None
+        };
+
+        let headers = create_l2_headers(wallet, creds, "GET", endpoint_path, None, timestamp)
+            .await?
+            .to_headers();
+
+        let mut query_params = HashMap::new();
+        query_params.insert(
+            "next_cursor".to_string(),
+            cursor.unwrap_or_else(|| INITIAL_CURSOR.to_string()),
+        );
+
+        self.http_client
+            .get(endpoint_path, Some(headers), Some(query_params))
+            .await
+    }
 }
