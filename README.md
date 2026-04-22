@@ -1,16 +1,12 @@
 # rs-clob-client-v2
 
-> 🚧 **Work in Progress** — V2 protocol migration. Expect breaking changes until `0.1.0` is released. For the stable V1 client, see [`rs-clob-client`](https://github.com/tdergouzi/rs-clob-client).
+🦀 Rust client for Polymarket's CLOB (Central Limit Order Book) **v2 protocol**, with full EIP-712 signing and byte-level cross-language parity against the official TypeScript SDK.
 
-🦀 Rust client for Polymarket's CLOB (Central Limit Order Book) **v2 protocol** with full EIP-712 signing support.
+Port of [`@polymarket/clob-client-v2`](https://github.com/Polymarket/clob-client-v2). V2 introduces an 11-field EIP-712 order struct (adds `metadata`, `builder`, `timestamp`; drops `taker`, `nonce`, `expiration`, `feeRateBps` from the signed payload), bumps the domain version to `"2"`, and adds `Poly1271` for EIP-1271 smart-contract wallets.
 
-This library is a Rust port of the TypeScript `@polymarket/clob-client-v2`, targeting Polymarket's upgraded v2 exchange: new 11-field order struct, EIP-1271 smart-contract signature support, builder/referral metadata, read-only API keys, and more.
-
-Code examples below still reflect the v1 surface that this fork started from; they will be replaced with v2-native examples as the migration progresses.
+For the V1 client (frozen, bug-fix only), see [`rs-clob-client`](https://github.com/tdergouzi/rs-clob-client).
 
 ## Installation
-
-Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -20,237 +16,164 @@ alloy-signer-local = "0.8"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
-## API Documentation
-
-- [Public API](./docs/api-public.md) - Market data, orderbook, prices (No auth required)
-- [Auth API](./docs/api-auth.md) - API key management, balance, notifications
-- [Trading API](./docs/api-trading.md) - Order creation, submission, cancellation
-
 ## Quick Start
 
-### Basic Setup and Placing an Order
-
 ```rust
-use rs_clob_client::{ClobClient, Chain, Side, OrderType, UserOrder};
 use alloy_signer_local::PrivateKeySigner;
+use rs_clob_client_v2::{ClobClient, Chain, OrderType, Side, UserLimitOrder};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a wallet from private key
-    let private_key = "your_private_key_here";
-    let wallet = private_key.parse::<PrivateKeySigner>()?;
-    
-    // Initialize the CLOB client
+    let wallet = "0xYOUR_PRIVATE_KEY".parse::<PrivateKeySigner>()?;
     let host = "https://clob.polymarket.com".to_string();
-    let gamma_host = "https://gamma-api.polymarket.com".to_string();
+    let gamma = "https://gamma-api.polymarket.com".to_string();
 
-    // Create or derive API credentials
-    let temp_client = ClobClient::new(
-        host.clone(), gamma_host.clone(), Chain::Polygon,
+    // Bootstrap: derive an API key if one exists, otherwise create a new one.
+    let bootstrap = ClobClient::new(
+        host.clone(), gamma.clone(), Chain::Polygon,
         Some(wallet.clone()), None, None, None, None, false, None, None,
     )?;
-    let creds = temp_client.create_or_derive_api_key().await?;
+    let creds = bootstrap.create_or_derive_api_key(None).await?;
 
-    // Create the main client with credentials
+    // Main client with L1 + L2 auth.
     let client = ClobClient::new(
-        host, gamma_host, Chain::Polygon,
+        host, gamma, Chain::Polygon,
         Some(wallet), Some(creds),
-        Some(1), // Signature type: 0 = EOA, 1 = Poly Proxy, 2 = EIP-1271
+        Some(0),    // 0=EOA, 1=PolyProxy, 2=PolyGnosisSafe, 3=Poly1271
         None, None, false, None, None,
     )?;
-    
-    // Place a limit order
-    let order = UserOrder {
+
+    // V2 limit order. metadata/builder/timestamp default to zero.
+    // expiration is transmitted but NOT covered by the EIP-712 signature.
+    let order = UserLimitOrder {
         token_id: "your_token_id".to_string(),
         price: 0.52,
         size: 10.0,
         side: Side::Buy,
-        fee_rate_bps: None,
-        nonce: None,
         expiration: None,
+        timestamp: None,
+        metadata: None,
+        builder: None,
     };
-    
-    let result = client.create_order(order, OrderType::Gtc).await?;
-    println!("Order created: {:?}", result);
-    
+    let response = client.create_and_post_limit_order(&order, None, OrderType::Gtc).await?;
+    println!("{response:?}");
     Ok(())
 }
 ```
 
-### Market Data Access
+## Migration from V1
+
+V2 is a breaking change from the V1 protocol. See [**docs/MIGRATION.md**](docs/MIGRATION.md) for a field-by-field upgrade guide, signature-type mapping, client API diffs, and testing guidance.
+
+## Signature Types
+
+| Value | Variant | Use case |
+|-------|---------|----------|
+| `0` | `Eoa` | Standard wallet (MetaMask, raw `PrivateKeySigner`) |
+| `1` | `PolyProxy` | Polymarket proxy contract (email / Magic login) |
+| `2` | `PolyGnosisSafe` | Gnosis Safe wallets |
+| `3` | **`Poly1271`** *(V2 new)* | EIP-1271 smart-contract wallets / vaults |
+
+## Market Data (public, no auth)
 
 ```rust
-use rs_clob_client::{ClobClient, Chain};
+use rs_clob_client_v2::{ClobClient, Chain, PriceParams, Side};
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Public endpoints don't require authentication
-    let client = ClobClient::new(
-        "https://clob.polymarket.com".to_string(),
-        "https://gamma-api.polymarket.com".to_string(),
-        Chain::Polygon,
-        None, None, None, None, None, false, None, None,
-    )?;
-    
-    // Get orderbook for a token
-    let token_id = "your_token_id";
-    let orderbook = client.get_orderbook(token_id).await?;
-    println!("Orderbook: {:?}", orderbook);
-    
-    // Get current price
-    let price = client.get_price(token_id, rs_clob_client::Side::Buy).await?;
-    println!("Best buy price: {:?}", price);
-    
-    // Get spread
-    let spread = client.get_spread(token_id).await?;
-    println!("Spread: {:?}", spread);
-    
-    // Get recent trades
-    let trades = client.get_trades(token_id).await?;
-    println!("Recent trades: {:?}", trades);
-    
-    Ok(())
-}
-```
-
-### Managing Orders
-
-```rust
-// Cancel a specific order
-let order_id = "your_order_id";
-client.cancel_order(order_id).await?;
-
-// Cancel all orders for a market
-let token_id = "your_token_id";
-client.cancel_market_orders(
-    rs_clob_client::CancelMarketOrdersParams {
-        asset_id: token_id.to_string(),
-    }
-).await?;
-
-// Cancel all orders
-client.cancel_all().await?;
-
-// Get your open orders
-let open_orders = client.get_orders().await?;
-println!("Open orders: {:?}", open_orders);
-```
-
-## Advanced Usage
-
-### Market Orders
-
-```rust
-use rs_clob_client::{UserMarketOrder, Side};
-
-// Execute a market buy
-let market_order = UserMarketOrder {
-    token_id: "your_token_id".to_string(),
-    amount: 100.0, // Amount in USDC
-    price: None,   // Optional price limit
-    fee_rate_bps: None,
-    nonce: None,
-};
-
-let result = client.post_order(market_order, Side::Buy).await?;
-println!("Market order executed: {:?}", result);
-```
-
-### Builder API Integration
-
-```rust
-use rs_builder_signing_sdk::BuilderConfig;
-
-// Create builder configuration
-let builder_config = BuilderConfig::new(
-    "your_builder_api_key".to_string(),
-    "your_builder_secret".to_string(),
-);
-
-// Create client with builder support
 let client = ClobClient::new(
-    "https://clob.polymarket.com".to_string(),
-    "https://gamma-api.polymarket.com".to_string(),
+    "https://clob.polymarket.com".into(),
+    "https://gamma-api.polymarket.com".into(),
     Chain::Polygon,
-    Some(wallet), Some(creds), Some(0), None, None, false,
-    Some(builder_config), None,
+    None, None, None, None, None, false, None, None,
 )?;
 
-// Now you can use builder-specific endpoints
-let builder_trades = client.get_builder_trades(None, None).await?;
+let book   = client.get_orderbook(&"token_id".to_string()).await?;
+let price  = client.get_price(PriceParams { token_id: "…".into(), side: Side::Buy }).await?;
+let spread = client.get_spread("token_id").await?;
 ```
 
-## Security Considerations
+V2-specific market helpers:
 
-- 🔒 **Private Keys**: Never hardcode private keys. Use environment variables or secure key management solutions
-- 🔐 **EIP-712**: All orders are signed using EIP-712 standard to prevent replay and phishing attacks
-- ✅ **API Credentials**: Store API keys securely. Use L2 authentication for production deployments
-- 🛡️ **Domain Separation**: Orders are bound to specific chain IDs and contract addresses
-- 🔑 **Key Derivation**: Use `create_or_derive_api_key()` instead of creating new keys repeatedly
-- ⚠️ **Rate Limiting**: Respect API rate limits to avoid being blocked
+- `get_market_by_token(token_id)` — condition-id resolution
+- `get_clob_market(condition_id)` — CLOB market detail (`MarketDetails` with tokens, tick size, fee breakdown)
+- `get_market_trades_events(condition_id)` — live trade feed
+- `get_builder_fees(builder_code)` — maker/taker rates for a builder
+- `get_current_rewards()` / `get_raw_rewards_for_market(condition_id)` — rewards catalogue
+
+## Trading & Account
+
+```rust
+// Cancel a single order.
+client.cancel_order("0xorder_id".to_string()).await?;
+
+// Cancel all orders for a market.
+client.cancel_market_orders(CancelMarketOrdersParams { asset_id: "token_id".into() }).await?;
+
+// Cancel everything.
+client.cancel_all().await?;
+
+// List open orders.
+let open = client.get_open_orders(None).await?;
+
+// Pre-migration (V1-protocol) orders still owned by the account.
+let legacy = client.get_pre_migration_orders().await?;
+
+// Read-only API keys (V2 new): scope-limited creds for integrations.
+let ro_resp = client.create_readonly_api_key().await?;
+let keys    = client.get_readonly_api_keys().await?;
+client.delete_readonly_api_key("key").await?;
+```
 
 ## Configuration
 
-### Proxy Support (v0.1.4+)
+### Chain IDs
+- Polygon mainnet: `Chain::Polygon` (137)
+- Amoy testnet: `Chain::Amoy` (80002)
 
-The client supports HTTP/HTTPS/SOCKS5 proxy for all API requests. Pass the proxy URL as the last parameter:
-
+### Proxy Support
 ```rust
 let client = ClobClient::new(
-    host, gamma_host, chain_id,
-    Some(wallet), Some(creds), Some(1), None, None, false, None,
-    Some("http://127.0.0.1:7890".to_string()), // proxy_url
+    host, gamma, chain,
+    Some(wallet), Some(creds), Some(0), None, None, false, None,
+    Some("http://127.0.0.1:7890".to_string()),
 )?;
 ```
+Formats: `http://`, `https://`, `socks5://` (with optional `user:pass@`).
 
-Supported formats: `http://host:port`, `https://host:port`, `socks5://host:port` (with optional `user:pass@`)
+### Builder API (optional)
+```rust
+use rs_builder_signing_sdk::BuilderConfig;
 
-### Chain IDs
-- **Polygon Mainnet**: `Chain::Polygon` (137)
-- **Amoy Testnet**: `Chain::Amoy` (80002)
+let builder_cfg = BuilderConfig::new("builder_key".into(), "builder_secret".into());
+let client = ClobClient::new(
+    host, gamma, chain,
+    Some(wallet), Some(creds), Some(0), None, None, false,
+    Some(builder_cfg),
+    None,
+)?;
 
-### Signature Types
-- **0 (EOA)**: Standard wallet signatures (MetaMask, Coinbase Wallet, etc.)
-- **1 (Poly Proxy)**: Polymarket proxy contract (for email/Magic login users)
-- **2 (EIP-1271)**: Smart contract wallets (Gnosis Safe, etc.)
+let builder_trades = client.get_builder_trades(None, None).await?;
+let my_keys        = client.get_builder_api_keys().await?;
+```
 
-### Order Types
-- **GTC** (Good-Til-Cancelled): Order stays open until filled or cancelled
-- **FOK** (Fill-Or-Kill): Order must be filled immediately or cancelled
-- **GTD** (Good-Til-Date): Order expires at a specific time
+## Security
+
+- 🔒 Never hardcode private keys; use env vars or a secret manager.
+- 🔐 V2 signatures are bound to the chain id, exchange contract, and the protocol domain version `"2"`. V1 signatures do not verify against V2 backends.
+- ⚠️ `expiration` is transmitted but NOT covered by the EIP-712 signature (V2 design). Expiry is enforced protocol-side.
+- ✅ V2 signature output is cross-validated byte-for-byte against the TS V2 SDK for 7 canonical input scenarios (see `rs-order-utils/tests/v2_cross_language_vectors.rs`).
 
 ## Testing
 
 ```bash
-# Run all tests
-cargo test
-
-# Run tests with output
-cargo test -- --nocapture
-
-# Run specific test with output
-cargo test test_name -- --exact --nocapture
-
-# Build the library
-cargo build --release
+cargo test --lib         # unit tests, no network
+cargo test               # integration tests; requires .env with PK + API creds
+cargo fmt --all          # format
+cargo clippy             # lint
 ```
-
-## Examples
-
-See the TypeScript examples in the original repository for reference. Rust equivalents can be created following the patterns shown above.
 
 ## Notice
 
-⚠️ **AI-Generated Code**: This library was generated with AI assistance as a port from the official TypeScript implementation. While it aims for feature parity and has been structured following Rust best practices, users should:
-- Review the code thoroughly before using in production
-- Conduct their own security audits
-- Test extensively with their specific use cases
-- Start with testnet (Amoy) before moving to mainnet
-- Use at their own risk
-
-## Contributing
-
-Contributions are welcome! This is a community-maintained port of the official TypeScript client.
+⚠️ AI-assisted port. Audit thoroughly, start on Amoy testnet, verify signatures against Polymarket's backend in a staging environment before mainnet traffic.
 
 ## License
 
@@ -258,4 +181,5 @@ MIT
 
 ## Acknowledgments
 
-- Original TypeScript implementation: [Polymarket clob-client](https://github.com/Polymarket/clob-client)
+- Upstream: [`Polymarket/clob-client-v2`](https://github.com/Polymarket/clob-client-v2)
+- Built on [Alloy](https://github.com/alloy-rs/alloy) and [`rs-order-utils`](https://github.com/tdergouzi/rs-order-utils) v0.3 (V2 `v2` module)
