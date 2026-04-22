@@ -379,4 +379,26 @@ impl ClobClient {
         let endpoint = format!("{}{}", endpoints::GET_BUILDER_FEES, builder_code);
         self.http_client.get(&endpoint, None, None).await
     }
+
+    /// Resolves the market (condition id + metadata) owning a given token.
+    /// Shape is not fully stable; returned as raw JSON.
+    pub async fn get_market_by_token(&self, token_id: &str) -> ClobResult<serde_json::Value> {
+        let endpoint = format!("{}{}", endpoints::GET_MARKET_BY_TOKEN, token_id);
+        self.http_client.get(&endpoint, None, None).await
+    }
+
+    /// Fetches CLOB-specific market info for a condition id.
+    pub async fn get_clob_market(&self, condition_id: &str) -> ClobResult<MarketDetails> {
+        let endpoint = format!("{}{}", endpoints::GET_CLOB_MARKET, condition_id);
+        self.http_client.get(&endpoint, None, None).await
+    }
+
+    /// Streams recent on-chain trade events for a market.
+    pub async fn get_market_trades_events(
+        &self,
+        condition_id: &str,
+    ) -> ClobResult<Vec<MarketTradeEvent>> {
+        let endpoint = format!("{}{}", endpoints::GET_MARKET_TRADES_EVENTS, condition_id);
+        self.http_client.get(&endpoint, None, None).await
+    }
 }

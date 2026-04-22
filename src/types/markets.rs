@@ -573,3 +573,53 @@ pub struct BuilderTradesResponse {
     pub data: Vec<BuilderTrade>,
     pub next_cursor: String,
 }
+
+// ============================================================================
+// CLOB market details (V2 `/clob-markets/` payload)
+// ============================================================================
+
+/// A single (YES or NO) outcome token inside a [`MarketDetails`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClobToken {
+    /// Token ID.
+    #[serde(rename = "t")]
+    pub token_id: String,
+    /// Outcome label (e.g. `"Yes"` / `"No"`).
+    #[serde(rename = "o")]
+    pub outcome: String,
+}
+
+/// Platform fee breakdown embedded in [`MarketDetails`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FeeDetails {
+    #[serde(rename = "r", skip_serializing_if = "Option::is_none")]
+    pub rate: Option<f64>,
+    #[serde(rename = "e", skip_serializing_if = "Option::is_none")]
+    pub exponent: Option<f64>,
+    /// Taker-only fee flag.
+    #[serde(rename = "to")]
+    pub taker_only: bool,
+}
+
+/// Response for `GET /clob-markets/{condition_id}`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketDetails {
+    #[serde(rename = "c")]
+    pub condition_id: String,
+    /// YES and NO tokens. Either slot may be `None` for malformed markets.
+    #[serde(rename = "t")]
+    pub tokens: [Option<ClobToken>; 2],
+    #[serde(rename = "mts")]
+    pub min_tick_size: f64,
+    #[serde(rename = "nr")]
+    pub neg_risk: bool,
+    #[serde(rename = "fd", skip_serializing_if = "Option::is_none")]
+    pub fee_details: Option<FeeDetails>,
+    /// V1-only maker base fee; absent on V2-native markets.
+    #[serde(rename = "mbf", skip_serializing_if = "Option::is_none")]
+    pub v1_maker_base_fee: Option<f64>,
+    /// V1-only taker base fee; absent on V2-native markets.
+    #[serde(rename = "tbf", skip_serializing_if = "Option::is_none")]
+    pub v1_taker_base_fee: Option<f64>,
+}
+
