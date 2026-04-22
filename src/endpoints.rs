@@ -1,5 +1,9 @@
 /// API endpoint constants
 pub mod endpoints {
+    // Health
+    pub const OK: &str = "/ok";
+    pub const HEARTBEAT: &str = "/v1/heartbeats";
+
     // Server Time
     pub const TIME: &str = "/time";
 
@@ -15,6 +19,11 @@ pub mod endpoints {
     pub const GET_BUILDER_API_KEYS: &str = "/auth/builder-api-key";
     pub const REVOKE_BUILDER_API_KEY: &str = "/auth/builder-api-key";
 
+    // Readonly API Key endpoints
+    pub const CREATE_READONLY_API_KEY: &str = "/auth/readonly-api-key";
+    pub const GET_READONLY_API_KEYS: &str = "/auth/readonly-api-keys";
+    pub const DELETE_READONLY_API_KEY: &str = "/auth/readonly-api-key";
+
     // Tags
     pub const GET_TAGS: &str = "/tags";
     pub const GET_TAG_BY_SLUG: &str = "/tags/slug/";
@@ -25,9 +34,14 @@ pub mod endpoints {
     pub const GET_EVENT_BY_SLUG: &str = "/events/slug/";
 
     // Markets
+    pub const GET_SAMPLING_SIMPLIFIED_MARKETS: &str = "/sampling-simplified-markets";
+    pub const GET_SAMPLING_MARKETS: &str = "/sampling-markets";
+    pub const GET_SIMPLIFIED_MARKETS: &str = "/simplified-markets";
     pub const GET_MARKETS: &str = "/markets";
     pub const GET_MARKET: &str = "/markets/";
     pub const GET_MARKET_BY_SLUG: &str = "/markets/slug/";
+    pub const GET_MARKET_BY_TOKEN: &str = "/markets-by-token/";
+    pub const GET_CLOB_MARKET: &str = "/clob-markets/";
 
     // Orderbook
     pub const GET_ORDER_BOOK: &str = "/book";
@@ -43,6 +57,7 @@ pub mod endpoints {
     pub const GET_LAST_TRADES_PRICES: &str = "/last-trades-prices";
 
     // Token
+    pub const GET_SPREAD: &str = "/spread";
     pub const GET_SPREADS: &str = "/spreads";
     pub const GET_TICK_SIZE: &str = "/tick-size";
     pub const GET_NEG_RISK: &str = "/neg-risk";
@@ -57,6 +72,7 @@ pub mod endpoints {
     pub const CANCEL_ALL: &str = "/cancel-all";
     pub const CANCEL_MARKET_ORDERS: &str = "/cancel-market-orders";
     pub const GET_OPEN_ORDERS: &str = "/data/orders";
+    pub const GET_PRE_MIGRATION_ORDERS: &str = "/data/pre-migration-orders";
     pub const GET_TRADES: &str = "/data/trades";
     pub const IS_ORDER_SCORING: &str = "/order-scoring";
     pub const ARE_ORDERS_SCORING: &str = "/orders-scoring";
@@ -74,7 +90,15 @@ pub mod endpoints {
     pub const GET_TOTAL_EARNINGS_FOR_USER_FOR_DAY: &str = "/rewards/user/total";
     pub const GET_LIQUIDITY_REWARD_PERCENTAGES: &str = "/rewards/user/percentages";
     pub const GET_REWARDS_EARNINGS_PERCENTAGES: &str = "/rewards/user/markets";
+    pub const GET_REWARDS_MARKETS_CURRENT: &str = "/rewards/markets/current";
+    pub const GET_REWARDS_MARKETS: &str = "/rewards/markets/";
 
     // Builder endpoints
     pub const GET_BUILDER_TRADES: &str = "/builder/trades";
+
+    // Fees
+    pub const GET_BUILDER_FEES: &str = "/fees/builder-fees/";
+
+    // Live Activity
+    pub const GET_MARKET_TRADES_EVENTS: &str = "/markets/live-activity/";
 }
