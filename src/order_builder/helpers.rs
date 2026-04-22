@@ -7,7 +7,7 @@ use crate::types::{
 use crate::utilities::{decimal_places, round_down, round_normal, round_up};
 use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
-use rs_order_utils::{ExchangeOrderBuilder, OrderData, SignatureType, SignedOrder};
+use rs_order_utils::v2::{ExchangeOrderBuilder, OrderData, SignatureType, SignedOrder};
 use std::str::FromStr;
 
 pub fn get_rounding_config(tick_size: TickSize) -> RoundConfig {
@@ -271,12 +271,6 @@ pub fn build_limit_order_creation_args(
     let maker_amount = parse_units(raw_amounts.raw_maker_amt, COLLATERAL_TOKEN_DECIMALS);
     let taker_amount = parse_units(raw_amounts.raw_taker_amt, COLLATERAL_TOKEN_DECIMALS);
 
-    let taker = user_limit_order.taker.unwrap_or(Address::ZERO);
-
-    let fee_rate_bps = U256::from(user_limit_order.fee_rate_bps.unwrap_or(0));
-    let nonce = U256::from(user_limit_order.nonce.unwrap_or(0));
-    let expiration = user_limit_order.expiration.map(U256::from);
-
     let token_id = U256::from_str(&user_limit_order.token_id)
         .map_err(|e| ClobError::Other(format!("Invalid token_id: {}", e)))?;
 
@@ -287,16 +281,16 @@ pub fn build_limit_order_creation_args(
 
     Ok(OrderData {
         maker,
-        taker,
+        signer: Some(signer_address),
         token_id,
         maker_amount,
         taker_amount,
         side,
-        fee_rate_bps,
-        nonce,
-        signer: Some(signer_address),
-        expiration,
         signature_type: Some(signature_type),
+        timestamp: user_limit_order.timestamp.map(U256::from),
+        metadata: user_limit_order.metadata,
+        builder: user_limit_order.builder,
+        expiration: user_limit_order.expiration.map(U256::from),
     })
 }
 
@@ -348,14 +342,8 @@ pub fn build_market_order_creation_args(
         round_config,
     );
 
-    // Use market-specific parsing functions that enforce API precision requirements
     let maker_amount = parse_market_maker_units(raw_amounts.raw_maker_amt, COLLATERAL_TOKEN_DECIMALS);
     let taker_amount = parse_market_taker_units(raw_amounts.raw_taker_amt, COLLATERAL_TOKEN_DECIMALS);
-
-    let taker = user_market_order.taker.unwrap_or(Address::ZERO);
-
-    let fee_rate_bps = U256::from(user_market_order.fee_rate_bps.unwrap_or(0));
-    let nonce = U256::from(user_market_order.nonce.unwrap_or(0));
 
     let token_id = U256::from_str(&user_market_order.token_id)
         .map_err(|e| ClobError::Other(format!("Invalid token_id: {}", e)))?;
@@ -367,16 +355,16 @@ pub fn build_market_order_creation_args(
 
     Ok(OrderData {
         maker,
-        taker,
+        signer: Some(signer_address),
         token_id,
         maker_amount,
         taker_amount,
         side,
-        fee_rate_bps,
-        nonce,
-        signer: Some(signer_address),
-        expiration: Some(U256::ZERO),
         signature_type: Some(signature_type),
+        timestamp: user_market_order.timestamp.map(U256::from),
+        metadata: user_market_order.metadata,
+        builder: user_market_order.builder,
+        expiration: Some(U256::ZERO),
     })
 }
 

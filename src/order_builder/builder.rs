@@ -2,7 +2,7 @@ use crate::errors::ClobResult;
 use crate::types::{Chain, CreateOrderOptions, UserMarketOrder, UserLimitOrder};
 use alloy_primitives::Address;
 use alloy_signer_local::PrivateKeySigner;
-use rs_order_utils::{SignatureType, SignedOrder};
+use rs_order_utils::v2::{SignatureType, SignedOrder};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;

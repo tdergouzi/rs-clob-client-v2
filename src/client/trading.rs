@@ -5,7 +5,7 @@ use crate::errors::{ClobError, ClobResult};
 use crate::headers::create_l2_headers;
 use crate::order_builder::{calculate_buy_market_price, calculate_sell_market_price};
 use crate::types::*;
-use rs_order_utils::SignedOrder;
+use rs_order_utils::v2::SignedOrder;
 use std::collections::HashMap;
 
 impl ClobClient {
@@ -32,21 +32,14 @@ impl ClobClient {
 
         let token_id = &user_limit_order.token_id;
 
-        // Resolve tick size
         let tick_size = if let Some(opts) = &options {
             opts.tick_size
         } else {
             self.get_tick_size(token_id).await?
         };
 
-        // Resolve fee rate
-        let fee_rate_bps = self
-            ._resolve_fee_rate_bps(token_id, user_limit_order.fee_rate_bps)
-            .await?;
-
-        // Resolve neg_risk
         let neg_risk = if let Some(opts) = &options {
-            opts.neg_risk.unwrap_or_else(|| false)
+            opts.neg_risk.unwrap_or(false)
         } else {
             self.get_neg_risk(token_id).await?
         };
@@ -56,15 +49,14 @@ impl ClobClient {
             neg_risk: Some(neg_risk),
         };
 
-        let mut order = user_limit_order.clone();
-        order.fee_rate_bps = Some(fee_rate_bps);
-
         let order_builder = self
             .order_builder
             .as_ref()
             .ok_or(ClobError::L1AuthUnavailable)?;
 
-        let signed_order = order_builder.build_limit_order(&order, &create_options).await?;
+        let signed_order = order_builder
+            .build_limit_order(user_limit_order, &create_options)
+            .await?;
         self.signed_order_to_json(signed_order)
     }
 
@@ -87,19 +79,12 @@ impl ClobClient {
 
         let token_id = &user_market_order.token_id;
 
-        // Resolve tick size
         let tick_size = if let Some(opts) = &options {
             opts.tick_size
         } else {
             self.get_tick_size(token_id).await?
         };
 
-        // Resolve fee rate
-        let fee_rate_bps = self
-            ._resolve_fee_rate_bps(token_id, user_market_order.fee_rate_bps)
-            .await?;
-
-        // Resolve neg_risk
         let neg_risk = if let Some(opts) = &options {
             opts.neg_risk.unwrap_or(false)
         } else {
@@ -112,7 +97,6 @@ impl ClobClient {
         };
 
         let mut order = user_market_order.clone();
-        order.fee_rate_bps = Some(fee_rate_bps);
 
         // Calculate market price if not provided
         if order.price.is_none() {
@@ -649,29 +633,6 @@ impl ClobClient {
     // Private Helper Methods
     // ===================================
 
-    /// Resolves the fee rate for a token
-    ///
-    /// If the user provides a fee rate and it doesn't match the market fee rate,
-    /// returns an error.
-    pub(crate) async fn _resolve_fee_rate_bps(
-        &self,
-        token_id: &str,
-        user_fee: Option<u32>,
-    ) -> ClobResult<u32> {
-        let market_fee = self.get_fee_rate_bps(token_id).await?;
-
-        if let Some(user_provided) = user_fee {
-            if market_fee > 0 && user_provided != market_fee {
-                return Err(ClobError::InvalidFeeRate {
-                    user_fee_rate: user_provided,
-                    market_fee_rate: market_fee,
-                });
-            }
-        }
-
-        Ok(market_fee)
-    }
-
     /// Converts order to JSON payload for API submission
     fn order_to_json(
         &self,
@@ -693,21 +654,7 @@ impl ClobClient {
         }))
     }
 
-    /// Converts a SignedOrder to JSON format for API submission
     fn signed_order_to_json(&self, signed_order: SignedOrder) -> ClobResult<serde_json::Value> {
-        let mut json = serde_json::to_value(&signed_order).map_err(|e| ClobError::JsonError(e))?;
-        
-        // Convert numeric side ("0" or "1") to string side ("BUY" or "SELL")
-        // The API expects "BUY"/"SELL" strings, not numeric values
-        if let Some(side) = json.get("side") {
-            let side_str = match side.as_str() {
-                Some("0") => "BUY",
-                Some("1") => "SELL",
-                _ => return Ok(json), // Keep as-is if already correct format
-            };
-            json["side"] = serde_json::Value::String(side_str.to_string());
-        }
-        
-        Ok(json)
+        serde_json::to_value(&signed_order).map_err(ClobError::JsonError)
     }
 }

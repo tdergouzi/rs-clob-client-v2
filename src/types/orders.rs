@@ -1,4 +1,4 @@
-use alloy_primitives::Address;
+use alloy_primitives::B256;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -8,72 +8,62 @@ use super::primitives::{OrderType, Side};
 // Order Types & Parameters
 // ============================================================================
 
-/// Simplified user order for creating limit orders
+/// V2 limit-order input.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserLimitOrder {
-    /// Token ID of the conditional token asset being traded
     #[serde(rename = "tokenID")]
     pub token_id: String,
-
-    /// Price used to create the order
     pub price: f64,
-
-    /// Size in terms of the ConditionalToken
     pub size: f64,
-
-    /// Side of the order
     pub side: Side,
 
-    /// Fee rate, in basis points, charged to the order maker
-    #[serde(rename = "feeRateBps", skip_serializing_if = "Option::is_none")]
-    pub fee_rate_bps: Option<u32>,
-
-    /// Nonce used for onchain cancellations
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<u64>,
-
-    /// Timestamp after which the order is expired
+    /// Expiration (Unix seconds). Not covered by the EIP-712 signature.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expiration: Option<u64>,
 
-    /// Address of the order taker (zero address = public order)
+    /// Client timestamp (Unix ms). Defaults to `Date.now()` equivalent when `None`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub taker: Option<Address>,
+    pub timestamp: Option<u64>,
+
+    /// Order metadata (`bytes32`), defaults to zero.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<B256>,
+
+    /// Builder marker (`bytes32`), defaults to zero.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub builder: Option<B256>,
 }
 
-/// Simplified market order for users
+/// V2 market-order input.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserMarketOrder {
-    /// Token ID of the conditional token asset being traded
     #[serde(rename = "tokenID")]
     pub token_id: String,
 
-    /// Price (if not present, market price will be calculated)
+    /// When `None`, the client calculates the market price from the book.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub price: Option<f64>,
 
-    /// BUY orders: $$$ Amount to buy
-    /// SELL orders: Shares to sell
+    /// BUY: USDC amount. SELL: share amount.
     pub amount: f64,
 
-    /// Side of the order
     pub side: Side,
 
-    /// Fee rate, in basis points
-    #[serde(rename = "feeRateBps", skip_serializing_if = "Option::is_none")]
-    pub fee_rate_bps: Option<u32>,
-
-    /// Nonce used for onchain cancellations
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<u64>,
-
-    /// Address of the order taker
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub taker: Option<Address>,
-
-    /// Order type (FOK or FAK)
+    /// FOK or FAK. Defaults to FOK when `None`.
     #[serde(rename = "orderType", skip_serializing_if = "Option::is_none")]
     pub order_type: Option<OrderType>,
+
+    /// Client timestamp (Unix ms). Defaults to `Date.now()` equivalent when `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<u64>,
+
+    /// Order metadata (`bytes32`), defaults to zero.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<B256>,
+
+    /// Builder marker (`bytes32`), defaults to zero.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub builder: Option<B256>,
 }
 
 /// Order payload for cancellation

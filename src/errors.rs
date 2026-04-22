@@ -38,13 +38,6 @@ pub enum ClobError {
         min_tick_size: String,
     },
 
-    /// Invalid fee rate
-    #[error("Invalid user provided fee rate: {user_fee_rate}, fee rate for the market must be {market_fee_rate}")]
-    InvalidFeeRate {
-        user_fee_rate: u32,
-        market_fee_rate: u32,
-    },
-
     /// No orderbook available
     #[error("No orderbook available")]
     NoOrderbook,

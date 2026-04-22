@@ -36,7 +36,7 @@ pub struct ClobClient {
     /// Order builder for creating and signing orders (requires a wallet)
     pub(crate) order_builder: Option<OrderBuilder>,
 
-    /// Signature type for orders (0 = EOA, 1 = Poly Proxy, 2 = EIP-1271)
+    /// Signature type: 0 = EOA, 1 = Poly Proxy, 2 = Poly Gnosis Safe, 3 = Poly1271 (EIP-1271).
     #[allow(unused)]
     pub(crate) signature_type: u8,
 
@@ -65,7 +65,7 @@ impl ClobClient {
     /// * `chain_id` - Blockchain network (Chain::Polygon or Chain::Amoy)
     /// * `wallet` - Optional wallet for L1 authentication and signing orders
     /// * `creds` - Optional API credentials for L2 authentication
-    /// * `signature_type` - Signature type for orders (0 = EOA, 1 = Poly Proxy, 2 = EIP-1271)
+    /// * `signature_type` - 0 = EOA, 1 = Poly Proxy, 2 = Poly Gnosis Safe, 3 = Poly1271 (EIP-1271)
     /// * `funder_address` - Optional funder address for smart contract wallets
     /// * `geo_block_token` - Optional geo-block token
     /// * `use_server_time` - Whether to use server time for signatures
@@ -103,10 +103,11 @@ impl ClobClient {
 
         // Convert signature type to SignatureType enum
         let sig_type_enum = match sig_type {
-            0 => rs_order_utils::SignatureType::Eoa,
-            1 => rs_order_utils::SignatureType::PolyProxy,
-            2 => rs_order_utils::SignatureType::PolyGnosisSafe,
-            _ => rs_order_utils::SignatureType::Eoa,
+            0 => rs_order_utils::v2::SignatureType::Eoa,
+            1 => rs_order_utils::v2::SignatureType::PolyProxy,
+            2 => rs_order_utils::v2::SignatureType::PolyGnosisSafe,
+            3 => rs_order_utils::v2::SignatureType::Poly1271,
+            _ => rs_order_utils::v2::SignatureType::Eoa,
         };
 
         // Parse funder address if provided
