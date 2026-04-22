@@ -305,7 +305,7 @@ pub async fn create_limit_order(
     let signer_address = wallet.address();
     let maker = funder_address.unwrap_or(signer_address);
     let contract_config =
-        get_contract_config(chain_id.chain_id()).map_err(|e| ClobError::Other(e))?;
+        get_contract_config(chain_id.chain_id()).map_err(ClobError::Other)?;
 
     let round_config = get_rounding_config(options.tick_size);
 
@@ -379,7 +379,7 @@ pub async fn create_market_order(
     let signer_address = wallet.address();
     let maker = funder_address.unwrap_or(signer_address);
     let contract_config =
-        get_contract_config(chain_id.chain_id()).map_err(|e| ClobError::Other(e))?;
+        get_contract_config(chain_id.chain_id()).map_err(ClobError::Other)?;
 
     let round_config = get_rounding_config(options.tick_size);
 
