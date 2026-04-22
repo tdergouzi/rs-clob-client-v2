@@ -1,4 +1,5 @@
 use crate::client::ClobClient;
+use crate::constants::{END_CURSOR, INITIAL_CURSOR};
 use crate::endpoints::endpoints;
 use crate::errors::{ClobError, ClobResult};
 use crate::headers::create_l2_headers;
@@ -409,5 +410,62 @@ impl ClobClient {
     ) -> ClobResult<Vec<MarketTradeEvent>> {
         let endpoint = format!("{}{}", endpoints::GET_MARKET_TRADES_EVENTS, condition_id);
         self.http_client.get(&endpoint, None, None).await
+    }
+
+    /// Auto-paginates the set of markets currently eligible for liquidity rewards.
+    pub async fn get_current_rewards(&self) -> ClobResult<Vec<MarketReward>> {
+        #[derive(Deserialize)]
+        struct RewardsPage {
+            data: Vec<MarketReward>,
+            next_cursor: String,
+        }
+
+        let mut results = Vec::new();
+        let mut next_cursor = INITIAL_CURSOR.to_string();
+
+        while next_cursor != END_CURSOR {
+            let mut query_params = HashMap::new();
+            query_params.insert("next_cursor".to_string(), next_cursor.clone());
+
+            let page: RewardsPage = self
+                .http_client
+                .get(endpoints::GET_REWARDS_MARKETS_CURRENT, None, Some(query_params))
+                .await?;
+            results.extend(page.data);
+            next_cursor = page.next_cursor;
+        }
+
+        Ok(results)
+    }
+
+    /// Auto-paginates historical reward configurations for a single market.
+    pub async fn get_raw_rewards_for_market(
+        &self,
+        condition_id: &str,
+    ) -> ClobResult<Vec<MarketReward>> {
+        #[derive(Deserialize)]
+        struct RewardsPage {
+            data: Vec<MarketReward>,
+            next_cursor: String,
+        }
+
+        let endpoint = format!("{}{}", endpoints::GET_REWARDS_MARKETS, condition_id);
+
+        let mut results = Vec::new();
+        let mut next_cursor = INITIAL_CURSOR.to_string();
+
+        while next_cursor != END_CURSOR {
+            let mut query_params = HashMap::new();
+            query_params.insert("next_cursor".to_string(), next_cursor.clone());
+
+            let page: RewardsPage = self
+                .http_client
+                .get(&endpoint, None, Some(query_params))
+                .await?;
+            results.extend(page.data);
+            next_cursor = page.next_cursor;
+        }
+
+        Ok(results)
     }
 }
