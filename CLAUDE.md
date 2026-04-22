@@ -31,11 +31,10 @@ Format: `<type>(<scope>): <subject>`
 **Types**: `feat` · `fix` · `docs` · `style` · `refactor` · `test` · `chore` · `perf`
 
 **Rules**:
-- **Single line only.** No body, no trailer, no blank line.
-- Total length **≤ 72 characters**.
+- **Subject line ≤ 72 characters.** No descriptive body paragraphs.
 - Lowercase, imperative mood (`add`, not `added`).
 - Scope optional (e.g. `order`, `signing`, `deps`, `types`, `client`).
-- **Do NOT include `Co-Authored-By`.**
+- `Co-Authored-By:` trailer is allowed (and appropriate when pair-authored).
 
 Examples:
 - `feat(order): add v2 builder with metadata + builder fields`
