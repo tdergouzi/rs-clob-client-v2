@@ -21,7 +21,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Ethereum & Cryptography
-rs_order_utils = "0.2.1"
+# Local path reference during V2 development; swap to version-pinned dep once
+# rs-order-utils 0.3.x is published to crates.io.
+rs_order_utils = { path = "../rs-order-utils" }
 rs-builder-signing-sdk = "0.1.2"
 
 # Alloy - Modern Ethereum library
