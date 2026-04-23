@@ -8,9 +8,13 @@ use rs_clob_client_v2::{
 };
 use std::env;
 
+fn load_env() {
+    let path = env::var("ENV_FILE").unwrap_or_else(|_| ".env".to_string());
+    dotenvy::from_filename(&path).ok();
+}
+
 pub fn create_test_client() -> ClobClient {
-    // Load environment variables from .env file
-    dotenvy::dotenv().ok();
+    load_env();
 
     // Get host from environment variable or use default
     let host = env::var("CLOB_API_URL").expect("CLOB_API_URL must be set");
@@ -34,8 +38,7 @@ pub fn create_test_client() -> ClobClient {
 }
 
 pub fn create_test_client_with_wallet() -> ClobClient {
-    // Load environment variables from .env file
-    dotenvy::dotenv().ok();
+    load_env();
 
     // Parse private key from environment
     let pk = env::var("PK").expect("PK must be set");
@@ -74,8 +77,7 @@ pub fn create_test_client_with_wallet() -> ClobClient {
 }
 
 pub fn create_test_client_with_api_key(signature_type: u8) -> ClobClient {
-    // Load environment variables from .env file
-    dotenvy::dotenv().ok();
+    load_env();
 
     // Parse private key from environment
     let pk = env::var("PK").expect("PK must be set");
@@ -128,8 +130,7 @@ pub fn create_test_client_with_api_key(signature_type: u8) -> ClobClient {
 }
 
 pub fn create_test_client_with_builder_api_key(signature_type: u8) -> ClobClient {
-    // Load environment variables from .env file
-    dotenvy::dotenv().ok();
+    load_env();
 
     // Parse private key from environment
     let pk = env::var("PK").expect("PK must be set");

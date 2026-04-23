@@ -74,6 +74,23 @@ V2 is a breaking change from the V1 protocol. See [**docs/MIGRATION.md**](docs/M
 | `2` | `PolyGnosisSafe` | Gnosis Safe wallets |
 | `3` | **`Poly1271`** *(V2 new)* | EIP-1271 smart-contract wallets / vaults |
 
+## V2 Contracts (Polygon, chain 137)
+
+| Name | Address |
+|------|---------|
+| CTF Exchange | `0xE111180000d2663C0091e4f400237545B87B996B` |
+| Neg Risk CTF Exchange | `0xe2222d279d744050d28e00520010520000310F59` |
+| Neg Risk Adapter | `0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296` |
+| Conditional Tokens (CTF) | `0x4D97DCd97eC945f40cF65F87097ACe5EA0476045` |
+| Collateral (pUSD) | `0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB` |
+| CollateralOnramp | `0x93070a847efEf7F70739046A929D47a521F5B8ee` |
+
+V2 migrates collateral from USDC.e to **pUSD** (standard ERC-20 on Polygon, backed by USDC). API-only users wrap USDC.e → pUSD via `CollateralOnramp.wrap()`. Full contract list: [Polymarket docs](https://docs.polymarket.com/resources/contracts).
+
+### Testing Endpoint
+
+Before the V2 production cutover, point at `https://clob-v2.polymarket.com` (paired with `https://gamma-api.polymarket.com`). After cutover, `https://clob.polymarket.com` routes to V2 automatically.
+
 ## Market Data (public, no auth)
 
 ```rust
@@ -125,9 +142,9 @@ client.delete_readonly_api_key("key").await?;
 
 ## Configuration
 
-### Chain IDs
-- Polygon mainnet: `Chain::Polygon` (137)
-- Amoy testnet: `Chain::Amoy` (80002)
+### Chain
+
+V2 is deployed on Polygon mainnet (`Chain::Polygon`, chain id 137) only.
 
 ### Proxy Support
 ```rust
@@ -173,7 +190,7 @@ cargo clippy             # lint
 
 ## Notice
 
-⚠️ AI-assisted port. Audit thoroughly, start on Amoy testnet, verify signatures against Polymarket's backend in a staging environment before mainnet traffic.
+⚠️ AI-assisted port. Audit thoroughly; verify order submission end-to-end against the V2 preview endpoint (`https://clob-v2.polymarket.com`) before switching production traffic to `https://clob.polymarket.com`.
 
 ## License
 
