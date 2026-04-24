@@ -3,7 +3,7 @@ mod common;
 use common::create_test_client_with_wallet;
 use rs_clob_client_v2::types::{OrderType, Side, TradeParams, UserLimitOrder, UserMarketOrder};
 
-const TOKEN: &str = "102936224134271070189104847090829839924697394514566827387181305960175107677216";
+const TOKEN: &str = "28161183422242370392388296744035422249088647252796713903067039294971789722479";
 const ORDER_ID: &str = "0xb2414d76eb52b85f0e756951532bf0c47eddc686b852484c28d8219401537f89";
 
 const LIMIT_BUY_PRICE: f64 = 0.95;
@@ -25,7 +25,7 @@ async fn test_create_market_buy_order() {
         .create_and_post_market_order(
             &UserMarketOrder {
                 token_id: TOKEN.to_string(),
-                amount: 1.0,
+                amount: 2.0,
                 side: Side::Buy,
                 price: None,
                 order_type: Some(OrderType::Fok), // or FAK
@@ -62,10 +62,10 @@ async fn test_create_market_sell_order() {
         .create_and_post_market_order(
             &UserMarketOrder {
                 token_id: TOKEN.to_string(),
-                amount: LIMIT_SELL_SIZE, // SHARES
+                amount: 2.985072, // SHARES
                 side: Side::Sell,
                 price: None,
-                order_type: None,
+                order_type: Some(OrderType::Fok),
                 timestamp: None,
                 metadata: None,
                 builder: None,
