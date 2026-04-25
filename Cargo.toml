@@ -1,6 +1,6 @@
 [package]
 name = "rs-clob-client-v2"
-version = "0.1.0-alpha.1"
+version = "0.1.0"
 edition = "2021"
 authors = ["Ted"]
 description = "Rust client for Polymarket's CLOB v2 protocol (Central Limit Order Book)"
@@ -21,9 +21,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Ethereum & Cryptography
-# Local path reference during V2 development; swap to version-pinned dep once
-# rs-order-utils 0.3.x is published to crates.io.
-rs_order_utils = { path = "../rs-order-utils" }
+rs_order_utils = "0.3.0"
 rs-builder-signing-sdk = "0.1.2"
 
 # Alloy - Modern Ethereum library

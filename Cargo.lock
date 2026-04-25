@@ -2449,7 +2449,7 @@ dependencies = [
 
 [[package]]
 name = "rs-clob-client-v2"
-version = "0.1.0-alpha.1"
+version = "0.1.0"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",
@@ -2476,7 +2476,9 @@ dependencies = [
 
 [[package]]
 name = "rs_order_utils"
-version = "0.3.0-alpha.1"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6803a97272f42d66f0fc57fc01fc67bda40cfde445edf97e3fb79450458c98e5"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",
