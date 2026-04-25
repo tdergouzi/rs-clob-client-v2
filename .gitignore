@@ -38,6 +38,7 @@ perf.data.old
 
 # Documentation build
 /doc
+docs/
 
 # Package manager files
 Cargo.lock

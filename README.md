@@ -10,7 +10,7 @@ For the V1 client (frozen, bug-fix only), see [`rs-clob-client`](https://github.
 
 ```toml
 [dependencies]
-rs-clob-client-v2 = "0.1.0-alpha.1"
+rs-clob-client-v2 = "0.1.1"
 alloy-primitives = "0.8"
 alloy-signer-local = "0.8"
 tokio = { version = "1.0", features = ["full"] }
@@ -60,10 +60,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
-
-## Migration from V1
-
-V2 is a breaking change from the V1 protocol. See [**docs/MIGRATION.md**](docs/MIGRATION.md) for a field-by-field upgrade guide, signature-type mapping, client API diffs, and testing guidance.
 
 ## Signature Types
 
