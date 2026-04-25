@@ -4,11 +4,10 @@ use common::create_test_client_with_wallet;
 use rs_clob_client_v2::types::{OrderType, Side, TradeParams, UserLimitOrder, UserMarketOrder};
 
 const TOKEN: &str = "28161183422242370392388296744035422249088647252796713903067039294971789722479";
-const ORDER_ID: &str = "0xb2414d76eb52b85f0e756951532bf0c47eddc686b852484c28d8219401537f89";
 
-const LIMIT_BUY_PRICE: f64 = 0.95;
+const LIMIT_BUY_PRICE: f64 = 0.4;
 const LIMIT_BUY_SIZE: f64 = 5.0;
-const LIMIT_SELL_PRICE: f64 = 0.4;
+const LIMIT_SELL_PRICE: f64 = 0.9;
 const LIMIT_SELL_SIZE: f64 = 5.0;
 
 #[tokio::test]
@@ -198,7 +197,7 @@ async fn test_get_open_order() {
         .expect("Failed to create or derive API key");
     client.set_api_creds(creds);
 
-    let order_id = ORDER_ID; // Market sell order
+    let order_id = "0xc6baed6d291c33c1e4f7e25cfba663911628b5da56645fa5158fd5355cb842b5"; // Market sell order
     let order = client
         .get_open_order(order_id)
         .await
@@ -216,7 +215,7 @@ async fn test_cancel_order() {
         .expect("Failed to create or derive API key");
     client.set_api_creds(creds);
 
-    let order_id = "0xdc034d11f56d803cd5cceb71482d92cc6aa9abea4cbf8b6b47d65cb845a80f71"; // Limit sell order
+    let order_id = "0xc6baed6d291c33c1e4f7e25cfba663911628b5da56645fa5158fd5355cb842b5"; // Limit sell order
     let response = client
         .cancel_order(order_id)
         .await
