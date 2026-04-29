@@ -10,9 +10,9 @@ For the V1 client (frozen, bug-fix only), see [`rs-clob-client`](https://github.
 
 ```toml
 [dependencies]
-rs-clob-client-v2 = "0.1.1"
-alloy-primitives = "0.8"
-alloy-signer-local = "0.8"
+rs-clob-client-v2 = "0.2.0"
+alloy-primitives = "1"
+alloy-signer-local = "1"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -195,4 +195,4 @@ MIT
 ## Acknowledgments
 
 - Upstream: [`Polymarket/clob-client-v2`](https://github.com/Polymarket/clob-client-v2)
-- Built on [Alloy](https://github.com/alloy-rs/alloy) and [`rs-order-utils`](https://github.com/tdergouzi/rs-order-utils) v0.3 (V2 `v2` module)
+- Built on [Alloy](https://github.com/alloy-rs/alloy) and [`rs-order-utils`](https://github.com/tdergouzi/rs-order-utils) v0.4 (V2 `v2` module)
