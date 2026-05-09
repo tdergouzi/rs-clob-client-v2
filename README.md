@@ -6,11 +6,13 @@ Port of [`@polymarket/clob-client-v2`](https://github.com/Polymarket/clob-client
 
 For the V1 client (frozen, bug-fix only), see [`rs-clob-client`](https://github.com/tdergouzi/rs-clob-client).
 
+> Release history lives in [CHANGELOG.md](./CHANGELOG.md).
+
 ## Installation
 
 ```toml
 [dependencies]
-rs-clob-client-v2 = "0.2.0"
+rs-clob-client-v2 = "0.2.1"
 alloy-primitives = "1"
 alloy-signer-local = "1"
 tokio = { version = "1.0", features = ["full"] }
@@ -173,7 +175,7 @@ let my_keys        = client.get_builder_api_keys().await?;
 - 🔒 Never hardcode private keys; use env vars or a secret manager.
 - 🔐 V2 signatures are bound to the chain id, exchange contract, and the protocol domain version `"2"`. V1 signatures do not verify against V2 backends.
 - ⚠️ `expiration` is transmitted but NOT covered by the EIP-712 signature (V2 design). Expiry is enforced protocol-side.
-- ✅ V2 signature output is cross-validated byte-for-byte against the TS V2 SDK for 7 canonical input scenarios (see `rs-order-utils/tests/v2_cross_language_vectors.rs`).
+- ✅ V2 signature output is cross-validated byte-for-byte against the TS V2 SDK for the `Eoa`, `PolyProxy`, and `PolyGnosisSafe` signature types (see `rs-order-utils/tests/v2_cross_language_vectors.rs`). `Poly1271` is excluded from cross-language parity until the TS SDK adopts the ERC-7739 nested `TypedDataSign` wrapping that the deposit wallet's on-chain `isValidSignature` requires — see [CHANGELOG.md](./CHANGELOG.md).
 
 ## Testing
 

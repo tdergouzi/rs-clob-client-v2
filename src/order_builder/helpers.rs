@@ -302,8 +302,15 @@ pub async fn create_limit_order(
     user_limit_order: &UserLimitOrder,
     options: &CreateOrderOptions,
 ) -> ClobResult<SignedOrder> {
-    let signer_address = wallet.address();
-    let maker = funder_address.unwrap_or(signer_address);
+    let eoa_address = wallet.address();
+    let maker = funder_address.unwrap_or(eoa_address);
+    // For POLY_1271 deposit-wallet trading, both `maker` and `signer` must be
+    // the wallet contract — the EOA is implicit (it produces the inner ECDSA).
+    let signer_address = if signature_type == SignatureType::Poly1271 {
+        maker
+    } else {
+        eoa_address
+    };
     let contract_config =
         get_contract_config(chain_id.chain_id()).map_err(ClobError::Other)?;
 
@@ -376,8 +383,13 @@ pub async fn create_market_order(
     user_market_order: &UserMarketOrder,
     options: &CreateOrderOptions,
 ) -> ClobResult<SignedOrder> {
-    let signer_address = wallet.address();
-    let maker = funder_address.unwrap_or(signer_address);
+    let eoa_address = wallet.address();
+    let maker = funder_address.unwrap_or(eoa_address);
+    let signer_address = if signature_type == SignatureType::Poly1271 {
+        maker
+    } else {
+        eoa_address
+    };
     let contract_config =
         get_contract_config(chain_id.chain_id()).map_err(ClobError::Other)?;
 
