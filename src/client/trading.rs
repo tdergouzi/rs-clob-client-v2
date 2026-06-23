@@ -455,13 +455,9 @@ impl ClobClient {
         let wallet = self.wallet.as_ref().ok_or(ClobError::L1AuthUnavailable)?;
         let creds = self.creds.as_ref().ok_or(ClobError::L2AuthNotAvailable)?;
 
-        #[derive(serde::Serialize)]
-        struct CancelOrdersPayload {
-            order_ids: Vec<String>,
-        }
-
-        let payload = CancelOrdersPayload { order_ids };
-        let body = serde_json::to_string(&payload)?;
+        // Polymarket DELETE /orders expects a bare JSON array of order IDs
+        // (`["0x...", ...]`), not an object. Sign and send the array directly.
+        let body = serde_json::to_string(&order_ids)?;
 
         let endpoint_path = endpoints::CANCEL_ORDERS;
         let timestamp = if self.use_server_time {
@@ -482,7 +478,7 @@ impl ClobClient {
         .to_headers();
 
         self.http_client
-            .delete(endpoint_path, Some(headers), Some(payload), None)
+            .delete(endpoint_path, Some(headers), Some(order_ids), None)
             .await
     }
 

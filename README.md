@@ -12,7 +12,7 @@ For the V1 client (frozen, bug-fix only), see [`rs-clob-client`](https://github.
 
 ```toml
 [dependencies]
-rs-clob-client-v2 = "0.2.1"
+rs-clob-client-v2 = "0.2.2"
 alloy-primitives = "1"
 alloy-signer-local = "1"
 tokio = { version = "1.0", features = ["full"] }
@@ -119,6 +119,9 @@ V2-specific market helpers:
 ```rust
 // Cancel a single order.
 client.cancel_order("0xorder_id".to_string()).await?;
+
+// Cancel a batch of orders by id.
+client.cancel_orders(vec!["0xorder_id_a".into(), "0xorder_id_b".into()]).await?;
 
 // Cancel all orders for a market.
 client.cancel_market_orders(CancelMarketOrdersParams { asset_id: "token_id".into() }).await?;

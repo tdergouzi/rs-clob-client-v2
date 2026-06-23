@@ -4,6 +4,12 @@ All notable changes to `rs-clob-client-v2` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-06-23
+
+### Fixed
+
+- **`cancel_orders` request body now matches the Polymarket API.** The `DELETE /orders` endpoint expects a bare JSON array of order IDs (`["0x…", …]`), but the client was sending — and signing — a wrapped object (`{"order_ids": ["0x…", …]}`). This produced an HMAC over the wrong payload and a body the backend rejected. Both the signed body and the transmitted body are now the array itself.
+
 ## [0.2.1] — 2026-05-09
 
 ### Added

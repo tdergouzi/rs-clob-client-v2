@@ -1,6 +1,6 @@
 [package]
 name = "rs-clob-client-v2"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 authors = ["Ted"]
 description = "Rust client for Polymarket's CLOB v2 protocol (Central Limit Order Book)"
