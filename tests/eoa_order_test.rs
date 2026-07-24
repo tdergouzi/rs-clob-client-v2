@@ -3,7 +3,7 @@ mod common;
 use common::create_test_client_with_wallet;
 use rs_clob_client_v2::types::{OrderType, Side, TradeParams, UserLimitOrder, UserMarketOrder};
 
-const TOKEN: &str = "28161183422242370392388296744035422249088647252796713903067039294971789722479";
+const TOKEN: &str = "111604417349377875799825956621596386269673370070912696668140891647145772186047";
 
 const LIMIT_BUY_PRICE: f64 = 0.4;
 const LIMIT_BUY_SIZE: f64 = 5.0;
@@ -61,7 +61,7 @@ async fn test_create_market_sell_order() {
         .create_and_post_market_order(
             &UserMarketOrder {
                 token_id: TOKEN.to_string(),
-                amount: 2.985072, // SHARES
+                amount: 2.706358, // SHARES
                 side: Side::Sell,
                 price: None,
                 order_type: Some(OrderType::Fok),

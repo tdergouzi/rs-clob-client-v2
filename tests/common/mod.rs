@@ -52,8 +52,14 @@ pub fn create_test_client_with_wallet() -> ClobClient {
         _ => Chain::Amoy,
     };
 
+    // Deposit wallet (funder) for POLY_1271 deposit-wallet trading (signatureType=3)
+    let deposit_wallet = env::var("POLY_FUNDER_ADDRESS").expect("POLY_FUNDER_ADDRESS must be set");
+
     let address = wallet.address();
-    println!("Address: {}, chainId: {}", address, chain_id_str);
+    println!(
+        "Address: {}, depositWallet: {}, chainId: {}",
+        address, deposit_wallet, chain_id_str
+    );
 
     // Get API host
     let host = env::var("CLOB_API_URL").expect("CLOB_API_URL must be set");
@@ -66,8 +72,8 @@ pub fn create_test_client_with_wallet() -> ClobClient {
         chain_id,
         Some(wallet),
         None,
-        Some(0),
-        None,
+        Some(3),
+        Some(deposit_wallet),
         None,
         true,
         None,
