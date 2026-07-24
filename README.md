@@ -12,7 +12,7 @@ For the V1 client (frozen, bug-fix only), see [`rs-clob-client`](https://github.
 
 ```toml
 [dependencies]
-rs-clob-client-v2 = "0.2.2"
+rs-clob-client-v2 = "0.2.3"
 alloy-primitives = "1"
 alloy-signer-local = "1"
 tokio = { version = "1.0", features = ["full"] }
@@ -115,6 +115,23 @@ V2-specific market helpers:
 - `get_current_rewards()` / `get_raw_rewards_for_market(condition_id)` — rewards catalogue
 
 ## Trading & Account
+
+### Order submission & settlement hashes
+
+Since the 2026-07-24 CLOB maintenance the exchange executes matches through an async pipeline: `POST /order` and `POST /orders` answer a FAK/FOK match with `tradeIDs`, before the settlement transaction has been broadcast. `post_order` / `post_orders` (and the `create_and_post_*` wrappers) hide this — they poll `GET /data/trades` for the returned trade IDs and write the hashes back onto the response under both `transactionsHashes` and `transactionHashes`, so existing call sites keep working unchanged.
+
+```rust
+let response = client.create_and_post_market_order(&order, None, OrderType::Fok).await?;
+let hashes = response["transactionsHashes"].as_array();  // resolved before this returns
+let trade_ids = response["tradeIDs"].as_array();         // always present on a match
+```
+
+Resolution is best-effort and never turns a successful placement into an error:
+
+- 250 ms poll interval, 30 s ceiling — shared across a whole `post_orders` batch, not per order.
+- Trades whose status is `FAILED` contribute no hash, so `transactionsHashes` may be shorter than `tradeIDs`.
+- If nothing resolves in time the field is left out entirely; follow the fill through `tradeIDs` and `get_trades`.
+- A matched FOK/FAK call now blocks until its hashes resolve (typically a few hundred ms). With `use_server_time = true` each poll costs an extra `/time` request.
 
 ```rust
 // Cancel a single order.

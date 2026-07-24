@@ -7,6 +7,70 @@ use crate::order_builder::{calculate_buy_market_price, calculate_sell_market_pri
 use crate::types::*;
 use rs_order_utils::v2::SignedOrder;
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
+
+/// Upper bound on how long a matched order waits for its settlement hashes.
+const RESOLVE_TRADES_TIMEOUT: Duration = Duration::from_secs(30);
+/// Delay between two sweeps over the still-unresolved trades.
+const RESOLVE_TRADES_POLL_INTERVAL: Duration = Duration::from_millis(250);
+
+/// Treats both `""` and an all-zero hash as "not settled on-chain yet".
+fn is_empty_hash(hash: &str) -> bool {
+    let digits = hash.trim().trim_start_matches("0x");
+    digits.is_empty() || digits.bytes().all(|b| b == b'0')
+}
+
+/// Reads the trade IDs of a post-order response that still needs its settlement
+/// hashes backfilled. Empty when the server already supplied hashes or the order
+/// did not match. The server has used several spellings for both fields.
+fn pending_trade_ids(response: &serde_json::Value) -> Vec<String> {
+    let has_hashes = [
+        "transactionsHashes",
+        "transactionHashes",
+        "transaction_hashes",
+    ]
+    .iter()
+    .find_map(|key| response.get(*key))
+    .and_then(|value| value.as_array())
+    .is_some_and(|hashes| !hashes.is_empty());
+    if has_hashes {
+        return Vec::new();
+    }
+
+    ["tradeIDs", "tradeIds", "trade_ids"]
+        .iter()
+        .find_map(|key| response.get(*key))
+        .and_then(|value| value.as_array())
+        .map(|ids| {
+            ids.iter()
+                .filter_map(|id| id.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Extracts the settlement hashes for the given trade IDs out of resolved
+/// trades. Trades that failed execution never contribute a hash.
+fn transaction_hashes_for(trade_ids: &[String], resolved_trades: &[Trade]) -> Vec<String> {
+    trade_ids
+        .iter()
+        .filter_map(|id| resolved_trades.iter().find(|trade| trade.id == *id))
+        .filter(|trade| !trade.status.eq_ignore_ascii_case("FAILED"))
+        .map(|trade| trade.transaction_hash.clone())
+        .filter(|hash| !is_empty_hash(hash))
+        .collect()
+}
+
+/// Writes resolved settlement hashes onto a post-order response, under both
+/// spellings so callers reading either key keep working.
+fn set_transaction_hashes(response: &mut serde_json::Value, hashes: Vec<String>) {
+    let Some(object) = response.as_object_mut() else {
+        return;
+    };
+    let value = serde_json::Value::from(hashes);
+    object.insert("transactionsHashes".to_string(), value.clone());
+    object.insert("transactionHashes".to_string(), value);
+}
 
 impl ClobClient {
     // ===================================
@@ -312,7 +376,58 @@ impl ClobClient {
             .await
     }
 
+    /// Polls the given trades until every one reaches a terminal execution
+    /// outcome (it carries a settlement transaction hash, or its status is
+    /// FAILED and never will) or the polling window elapses. Best-effort:
+    /// returns whatever resolved in time and never fails.
+    async fn wait_for_resolved_trades(&self, trade_ids: &[String]) -> Vec<Trade> {
+        let mut ids: Vec<&String> = Vec::new();
+        for id in trade_ids {
+            if !id.is_empty() && !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+        if ids.is_empty() {
+            return Vec::new();
+        }
+
+        let mut resolved: Vec<Option<Trade>> = vec![None; ids.len()];
+        let deadline = Instant::now() + RESOLVE_TRADES_TIMEOUT;
+
+        loop {
+            for (index, id) in ids.iter().enumerate() {
+                if resolved[index].is_some() {
+                    continue;
+                }
+                let params = TradeParams {
+                    id: Some((*id).clone()),
+                    ..Default::default()
+                };
+                let Ok(page) = self.get_trades_paginated(Some(params), None).await else {
+                    continue;
+                };
+                resolved[index] = page.data.into_iter().find(|trade| {
+                    trade.id == **id
+                        && (trade.status.eq_ignore_ascii_case("FAILED")
+                            || !is_empty_hash(&trade.transaction_hash))
+                });
+            }
+
+            if resolved.iter().all(Option::is_some) || Instant::now() >= deadline {
+                return resolved.into_iter().flatten().collect();
+            }
+            tokio::time::sleep(RESOLVE_TRADES_POLL_INTERVAL).await;
+        }
+    }
+
     /// Posts an order to the exchange
+    ///
+    /// When the order matches, the response carries the settlement transaction
+    /// hashes of its fills under `transactionsHashes` / `transactionHashes`,
+    /// resolved on a best-effort basis: the CLOB executes matches
+    /// asynchronously and answers with `tradeIDs`, so the client polls those
+    /// trades for up to 30s. If a hash never arrives the field is left out and
+    /// the fill can still be followed through `tradeIDs`.
     pub async fn post_order(
         &self,
         order: serde_json::Value,
@@ -352,14 +467,26 @@ impl ClobClient {
         };
 
         // Make request
-        self.http_client
+        let mut response: serde_json::Value = self
+            .http_client
             .post(
                 endpoint_path,
                 Some(final_headers),
                 Some(order_payload),
                 None,
             )
-            .await
+            .await?;
+
+        let trade_ids = pending_trade_ids(&response);
+        if !trade_ids.is_empty() {
+            let resolved_trades = self.wait_for_resolved_trades(&trade_ids).await;
+            let hashes = transaction_hashes_for(&trade_ids, &resolved_trades);
+            if !hashes.is_empty() {
+                set_transaction_hashes(&mut response, hashes);
+            }
+        }
+
+        Ok(response)
     }
 
     /// Posts multiple orders to the exchange
@@ -408,9 +535,34 @@ impl ClobClient {
             headers.to_headers()
         };
 
-        self.http_client
+        let mut responses: serde_json::Value = self
+            .http_client
             .post(endpoint_path, Some(final_headers), Some(payloads), None)
-            .await
+            .await?;
+
+        // Resolve the whole batch against a single polling window, so a degraded
+        // pipeline delays the batch by at most one timeout rather than one
+        // timeout per matched order.
+        let pending: Vec<Vec<String>> = responses
+            .as_array()
+            .map(|entries| entries.iter().map(pending_trade_ids).collect())
+            .unwrap_or_default();
+        let all_trade_ids: Vec<String> = pending.concat();
+        if all_trade_ids.is_empty() {
+            return Ok(responses);
+        }
+
+        let resolved_trades = self.wait_for_resolved_trades(&all_trade_ids).await;
+        if let Some(entries) = responses.as_array_mut() {
+            for (entry, trade_ids) in entries.iter_mut().zip(&pending) {
+                let hashes = transaction_hashes_for(trade_ids, &resolved_trades);
+                if !hashes.is_empty() {
+                    set_transaction_hashes(entry, hashes);
+                }
+            }
+        }
+
+        Ok(responses)
     }
 
     /// Cancels a single order by ID
@@ -704,5 +856,87 @@ impl ClobClient {
         self.http_client
             .get(endpoint_path, Some(headers), Some(query_params))
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn trade(id: &str, status: &str, transaction_hash: &str) -> Trade {
+        serde_json::from_value(json!({
+            "id": id,
+            "taker_order_id": "taker_1",
+            "market": "0xmarket",
+            "asset_id": "1234",
+            "side": "BUY",
+            "size": "12.5",
+            "fee_rate_bps": "5",
+            "price": "0.42",
+            "status": status,
+            "match_time": "1705322096",
+            "last_update": "1705322130",
+            "outcome": "YES",
+            "bucket_index": 2,
+            "owner": "owner-1",
+            "maker_address": "0x2222222222222222222222222222222222222222",
+            "transaction_hash": transaction_hash,
+            "trader_side": "TAKER"
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn test_is_empty_hash() {
+        assert!(is_empty_hash(""));
+        assert!(is_empty_hash("0x"));
+        assert!(is_empty_hash(
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        ));
+        assert!(!is_empty_hash("0x2369f69a"));
+    }
+
+    #[test]
+    fn test_pending_trade_ids() {
+        // Async pipeline: trade IDs only, hashes to be resolved.
+        assert_eq!(
+            pending_trade_ids(&json!({ "tradeIDs": ["trade-1", "trade-2"] })),
+            vec!["trade-1", "trade-2"]
+        );
+        // Server already supplied hashes: nothing to resolve.
+        assert!(pending_trade_ids(&json!({
+            "tradeIDs": ["trade-1"],
+            "transactionsHashes": ["0xabc"]
+        }))
+        .is_empty());
+        // Unmatched order.
+        assert!(pending_trade_ids(&json!({ "status": "live" })).is_empty());
+    }
+
+    #[test]
+    fn test_transaction_hashes_for() {
+        let ids = vec!["trade-1".to_string(), "trade-2".to_string()];
+        let resolved = vec![
+            trade("trade-1", "FAILED", ""),
+            trade("trade-2", "MINED", "0xabc"),
+        ];
+        // FAILED trades and trades still awaiting broadcast contribute nothing.
+        assert_eq!(transaction_hashes_for(&ids, &resolved), vec!["0xabc"]);
+    }
+
+    #[test]
+    fn test_set_transaction_hashes() {
+        let mut response = json!({ "orderID": "0x1", "tradeIDs": ["trade-1"] });
+        set_transaction_hashes(&mut response, vec!["0xabc".to_string()]);
+        assert_eq!(response["transactionsHashes"], json!(["0xabc"]));
+        assert_eq!(response["transactionHashes"], json!(["0xabc"]));
+    }
+
+    #[test]
+    fn test_trade_deserializes_without_transaction_hash() {
+        let pending = trade("trade-1", "MATCHED", "");
+        assert!(is_empty_hash(&pending.transaction_hash));
+        assert!(pending.maker_orders.is_empty());
     }
 }

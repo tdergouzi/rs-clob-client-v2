@@ -432,7 +432,11 @@ pub struct Trade {
     pub bucket_index: u32,
     pub owner: String,
     pub maker_address: String,
+    #[serde(default)]
     pub maker_orders: Vec<MakerOrder>,
+    /// On-chain settlement hash. Empty until the trade's transaction has been
+    /// broadcast — the CLOB's async execution pipeline creates trades first.
+    #[serde(default)]
     pub transaction_hash: String,
     pub trader_side: TraderSide,
 }
