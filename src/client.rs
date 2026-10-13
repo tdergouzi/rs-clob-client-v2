@@ -84,20 +84,82 @@ impl ClobClient {
         builder_config: Option<BuilderConfig>,
         host_proxy_url: Option<String>,
     ) -> ClobResult<Self> {
-        let host = if host.ends_with('/') {
-            host[..host.len() - 1].to_string()
-        } else {
-            host
+        let host = trim_trailing_slash(host);
+        let http_client = match &host_proxy_url {
+            Some(proxy) => HttpClient::with_proxy(host.clone(), proxy)?,
+            None => HttpClient::new(host.clone()),
         };
+        let gamma_api_client = HttpClient::new(trim_trailing_slash(gamma_host));
 
-        let gamma_host = if gamma_host.ends_with('/') {
-            gamma_host[..gamma_host.len() - 1].to_string()
-        } else {
-            gamma_host
-        };
+        Ok(Self::assemble(
+            host,
+            chain_id,
+            wallet,
+            creds,
+            signature_type,
+            funder_address,
+            geo_block_token,
+            use_server_time,
+            builder_config,
+            http_client,
+            gamma_api_client,
+        ))
+    }
 
-        let gamma_api_client = HttpClient::new(gamma_host);
+    /// Same as [`ClobClient::new`], except that every CLOB and Gamma request
+    /// goes through `http`. Proxy, timeouts and connection pooling are whatever
+    /// the caller configured on `http`, so clients built from clones of one
+    /// `reqwest::Client` share its connections. Build it with the re-exported
+    /// [`reqwest`](crate::reqwest) so the versions match.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_http_client(
+        host: String,
+        gamma_host: String,
+        chain_id: Chain,
+        wallet: Option<PrivateKeySigner>,
+        creds: Option<ApiKeyCreds>,
+        signature_type: Option<u8>,
+        funder_address: Option<String>,
+        geo_block_token: Option<String>,
+        use_server_time: bool,
+        builder_config: Option<BuilderConfig>,
+        http: reqwest::Client,
+    ) -> Self {
+        let host = trim_trailing_slash(host);
+        let http_client = HttpClient::from_client(host.clone(), http.clone());
+        let gamma_api_client = HttpClient::from_client(trim_trailing_slash(gamma_host), http);
 
+        Self::assemble(
+            host,
+            chain_id,
+            wallet,
+            creds,
+            signature_type,
+            funder_address,
+            geo_block_token,
+            use_server_time,
+            builder_config,
+            http_client,
+            gamma_api_client,
+        )
+    }
+
+    /// Shared tail of both constructors: signing setup around the two HTTP
+    /// clients they built.
+    #[allow(clippy::too_many_arguments)]
+    fn assemble(
+        host: String,
+        chain_id: Chain,
+        wallet: Option<PrivateKeySigner>,
+        creds: Option<ApiKeyCreds>,
+        signature_type: Option<u8>,
+        funder_address: Option<String>,
+        geo_block_token: Option<String>,
+        use_server_time: bool,
+        builder_config: Option<BuilderConfig>,
+        http_client: HttpClient,
+        gamma_api_client: HttpClient,
+    ) -> Self {
         // Default signature type to EOA (0) if not provided
         let sig_type = signature_type.unwrap_or(0);
 
@@ -127,19 +189,13 @@ impl ClobClient {
             )
         });
 
-        // Create HTTP client with optional proxy and geo_block_token
-        let http_client = match (&host_proxy_url, &geo_block_token) {
-            (Some(proxy), Some(token)) => {
-                HttpClient::with_proxy(host.clone(), proxy)?.with_geo_block_token(token.clone())
-            }
-            (Some(proxy), None) => HttpClient::with_proxy(host.clone(), proxy)?,
-            (None, Some(token)) => {
-                HttpClient::new(host.clone()).with_geo_block_token(token.clone())
-            }
-            (None, None) => HttpClient::new(host.clone()),
+        // The geo-block token rides on CLOB requests only
+        let http_client = match geo_block_token {
+            Some(token) => http_client.with_geo_block_token(token),
+            None => http_client,
         };
 
-        Ok(Self {
+        Self {
             http_client,
             gamma_api_client,
             host,
@@ -153,10 +209,18 @@ impl ClobClient {
             fee_rates: RwLock::new(HashMap::new()),
             use_server_time,
             builder_config,
-        })
+        }
     }
 
     pub fn set_api_creds(&mut self, creds: ApiKeyCreds) {
         self.creds = Some(creds);
+    }
+}
+
+/// Drops one trailing `/` so endpoint paths can be appended verbatim.
+fn trim_trailing_slash(url: String) -> String {
+    match url.strip_suffix('/') {
+        Some(trimmed) => trimmed.to_string(),
+        None => url,
     }
 }

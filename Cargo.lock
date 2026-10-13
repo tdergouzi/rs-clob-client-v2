@@ -2680,7 +2680,7 @@ dependencies = [
 
 [[package]]
 name = "rs-clob-client-v2"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",

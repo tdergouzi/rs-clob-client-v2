@@ -4,6 +4,21 @@ All notable changes to `rs-clob-client-v2` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] — 2026-10-13
+
+### Added
+
+- **`ClobClient::new_with_http_client`** — same arguments as `new`, with the trailing `host_proxy_url` replaced by a caller-built `reqwest::Client`. Every CLOB and Gamma request goes through that client, so its proxy, timeouts, TLS backend and connection pool are the caller's, and `ClobClient`s built from clones of one `reqwest::Client` share its connections instead of each holding a private pool. The crate now re-exports `reqwest` (0.11) so callers build the client against the matching version.
+
+### Fixed
+
+- **Requests no longer send `Connection: keep-alive`.** HTTP/1.1 keeps connections alive by default, and the header is illegal in HTTP/2: once a connection negotiates h2 (e.g. a client built with `use_rustls_tls()`, which offers h2 via ALPN), hyper strips it and logs a warning on every request.
+- **`create_api_key` no longer prints the L1 authentication headers to stdout.**
+
+### Notes
+
+- `new` is unchanged: CLOB requests use a client carrying the optional proxy, Gamma requests a separate client without it.
+
 ## [0.2.3] — 2026-07-24
 
 ### Fixed

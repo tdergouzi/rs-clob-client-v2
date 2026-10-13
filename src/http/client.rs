@@ -20,6 +20,16 @@ impl HttpClient {
         }
     }
 
+    /// Wrap a caller-built reqwest client: its proxy, timeouts and connection
+    /// pool apply to every request sent through this HttpClient.
+    pub fn from_client(base_url: String, client: Client) -> Self {
+        Self {
+            client,
+            base_url,
+            geo_block_token: None,
+        }
+    }
+
     /// Create a new HTTP client with proxy support
     /// proxy_url format: http://user:pass@host:port
     pub fn with_proxy(base_url: String, proxy_url: &str) -> ClobResult<Self> {
@@ -59,9 +69,8 @@ impl HttpClient {
         final_headers
             .entry("Accept".to_string())
             .or_insert_with(|| "*/*".to_string());
-        final_headers
-            .entry("Connection".to_string())
-            .or_insert_with(|| "keep-alive".to_string());
+        // No `Connection` header: HTTP/1.1 keeps the connection alive by
+        // default, and HTTP/2 forbids it (hyper strips it with a warning).
         final_headers
             .entry("Content-Type".to_string())
             .or_insert_with(|| "application/json".to_string());

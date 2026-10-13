@@ -12,7 +12,7 @@ For the V1 client (frozen, bug-fix only), see [`rs-clob-client`](https://github.
 
 ```toml
 [dependencies]
-rs-clob-client-v2 = "0.2.3"
+rs-clob-client-v2 = "0.2.4"
 alloy-primitives = "1"
 alloy-signer-local = "1"
 tokio = { version = "1.0", features = ["full"] }
@@ -113,6 +113,32 @@ V2-specific market helpers:
 - `get_market_trades_events(condition_id)` — live trade feed
 - `get_builder_fees(builder_code)` — maker/taker rates for a builder
 - `get_current_rewards()` / `get_raw_rewards_for_market(condition_id)` — rewards catalogue
+
+## Sharing one HTTP client
+
+`ClobClient::new` builds a private `reqwest::Client` (its own connection pool) per instance. A service that keeps one `ClobClient` per wallet can instead hand every instance a clone of one client through `new_with_http_client` — same arguments as `new`, with `host_proxy_url` replaced by the client — so all wallets reuse the same warm connections. Proxy, timeouts and TLS backend are configured on that client; build it with the re-exported `rs_clob_client_v2::reqwest` so the versions match.
+
+```rust
+use rs_clob_client_v2::{reqwest, Chain, ClobClient};
+use std::time::Duration;
+
+// `use_rustls_tls()` offers HTTP/2 via ALPN; the keep-alive PINGs hold the
+// connection open (and notice a dead one) while no request is in flight.
+let http = reqwest::Client::builder()
+    .use_rustls_tls()
+    .http2_keep_alive_interval(Duration::from_secs(30))
+    .http2_keep_alive_while_idle(true)
+    .pool_idle_timeout(None::<Duration>)
+    .connect_timeout(Duration::from_secs(10))
+    .timeout(Duration::from_secs(30))
+    .build()?;
+
+let client = ClobClient::new_with_http_client(
+    host, gamma, Chain::Polygon,
+    Some(wallet), Some(creds), Some(0), None, None, false, None,
+    http.clone(),
+);
+```
 
 ## Trading & Account
 

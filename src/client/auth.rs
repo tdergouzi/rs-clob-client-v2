@@ -25,8 +25,6 @@ impl ClobClient {
             .await?
             .to_headers();
 
-        println!("Headers: {:?}", headers);
-
         // Make request
         let response: ApiKeyRaw = self
             .http_client

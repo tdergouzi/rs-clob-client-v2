@@ -16,6 +16,8 @@ mod order_builder;
 pub use client::ClobClient;
 pub use errors::{ClobError, ClobResult};
 pub use types::*;
+// The reqwest this crate is built against, for `ClobClient::new_with_http_client`.
+pub use reqwest;
 
 // Prelude module for common imports
 pub mod prelude {
